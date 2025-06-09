@@ -1,0 +1,293 @@
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Colores de marca Esmeralda */
+    --color-esmeralda-blue: var(--esmeralda-blue);
+    --color-esmeralda-blue-light: var(--esmeralda-blue-light);
+    --color-esmeralda-blue-dark: var(--esmeralda-blue-dark);
+    --color-esmeralda-gray: var(--esmeralda-gray);
+    --color-esmeralda-gray-light: var(--esmeralda-gray-light);
+    --color-esmeralda-gray-dark: var(--esmeralda-gray-dark);
+    --color-esmeralda-silver: var(--esmeralda-silver);
+    --color-esmeralda-corporate: var(--esmeralda-corporate);
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: var(--esmeralda-blue);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: var(--esmeralda-gray-light);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: var(--esmeralda-blue-light);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: var(--esmeralda-blue);
+    --chart-1: var(--esmeralda-blue);
+    --chart-2: var(--esmeralda-gray);
+    --chart-3: var(--esmeralda-blue-dark);
+    --chart-4: var(--esmeralda-silver);
+    --chart-5: var(--esmeralda-corporate);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: var(--esmeralda-blue);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: var(--esmeralda-blue-light);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: var(--esmeralda-blue);
+
+    /* Paleta de colores Esmeralda basada en el logo */
+    --esmeralda-blue: oklch(0.55 0.18 220);           /* Azul principal del logo */
+    --esmeralda-blue-light: oklch(0.75 0.15 220);     /* Azul claro */
+    --esmeralda-blue-dark: oklch(0.35 0.22 220);      /* Azul oscuro */
+    --esmeralda-gray: oklch(0.65 0.02 240);           /* Gris del camión */
+    --esmeralda-gray-light: oklch(0.85 0.01 240);     /* Gris claro */
+    --esmeralda-gray-dark: oklch(0.45 0.03 240);      /* Gris oscuro */
+    --esmeralda-silver: oklch(0.75 0.01 0);           /* Plateado metálico */
+    --esmeralda-corporate: oklch(0.25 0.02 240);      /* Gris corporativo oscuro */
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.145 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.145 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: var(--esmeralda-blue-light);
+    --primary-foreground: oklch(0.145 0 0);
+    --secondary: var(--esmeralda-gray-dark);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: var(--esmeralda-blue);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.396 0.141 25.723);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: oklch(0.269 0 0);
+    --input: oklch(0.269 0 0);
+    --ring: var(--esmeralda-blue-light);
+    --chart-1: var(--esmeralda-blue-light);
+    --chart-2: var(--esmeralda-gray-light);
+    --chart-3: var(--esmeralda-blue);
+    --chart-4: var(--esmeralda-silver);
+    --chart-5: var(--esmeralda-corporate);
+    --sidebar: var(--esmeralda-corporate);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: var(--esmeralda-blue-light);
+    --sidebar-primary-foreground: oklch(0.145 0 0);
+    --sidebar-accent: var(--esmeralda-gray-dark);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(0.269 0 0);
+    --sidebar-ring: var(--esmeralda-blue);
+
+    /* Ajustes de colores Esmeralda para modo oscuro */
+    --esmeralda-blue: oklch(0.65 0.18 220);           /* Azul más claro en dark mode */
+    --esmeralda-blue-light: oklch(0.8 0.15 220);      /* Azul muy claro */
+    --esmeralda-blue-dark: oklch(0.45 0.22 220);      /* Azul medio */
+    --esmeralda-gray: oklch(0.7 0.02 240);            /* Gris más claro */
+    --esmeralda-gray-light: oklch(0.8 0.01 240);      /* Gris muy claro */
+    --esmeralda-gray-dark: oklch(0.5 0.03 240);       /* Gris medio */
+    --esmeralda-silver: oklch(0.85 0.01 0);           /* Plateado más brillante */
+    --esmeralda-corporate: oklch(0.15 0.02 240);      /* Gris corporativo más oscuro */
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Animaciones personalizadas para el login 2025 */
+@layer utilities {
+    /* Glassmorphism effect */
+    .glass-morphism {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Floating animation */
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0px);
+        }
+        50% {
+            transform: translateY(-20px);
+        }
+    }
+
+    .float-animation {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    /* Shimmer effect */
+    @keyframes shimmer {
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
+    }
+
+    .shimmer {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent
+        );
+        background-size: 200% 100%;
+        animation: shimmer 2s infinite;
+    }
+
+    /* Glow effect */
+    .glow {
+        box-shadow:
+            0 0 20px rgba(255, 255, 255, 0.1),
+            0 0 40px rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Pulse glow */
+    @keyframes pulse-glow {
+        0%, 100% {
+            box-shadow:
+                0 0 20px rgba(255, 255, 255, 0.1),
+                0 0 40px rgba(255, 255, 255, 0.05);
+        }
+        50% {
+            box-shadow:
+                0 0 30px rgba(255, 255, 255, 0.2),
+                0 0 60px rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    .pulse-glow {
+        animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    /* Slide in animations */
+    @keyframes slide-in-from-left {
+        0% {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        100% {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .animate-slide-in-left {
+        animation: slide-in-from-left 0.5s ease-out;
+    }
+
+    /* Scale in animation */
+    @keyframes scale-in {
+        0% {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .animate-scale-in {
+        animation: scale-in 0.3s ease-out;
+    }
+}
