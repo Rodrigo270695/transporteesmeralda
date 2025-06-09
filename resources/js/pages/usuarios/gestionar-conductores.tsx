@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type User } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, UserPlus, Edit2, Trash2, Search } from 'lucide-react';
+import { MoreHorizontal, UserCheck, Edit2, Trash2, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
@@ -49,12 +49,12 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/usuarios',
     },
     {
-        title: 'Gestionar Usuarios',
-        href: '/usuarios/gestionar',
+        title: 'Gestionar Conductores',
+        href: '/usuarios/gestionar-conductores',
     },
 ];
 
-export default function GestionarUsuarios({ users, roles, filters }: Props) {
+export default function GestionarConductores({ users, roles, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -74,7 +74,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchQuery !== (filters?.search || '')) {
-                router.get(route('usuarios.gestionar'),
+                router.get(route('usuarios.gestionar-conductores'),
                     searchQuery ? { search: searchQuery } : {},
                     {
                         preserveState: true,
@@ -132,7 +132,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
             },
             onError: () => {
                 setDeleteModal(prev => ({ ...prev, isDeleting: false }));
-                error('Error al eliminar', 'No se pudo eliminar el usuario. Inténtalo nuevamente.');
+                error('Error al eliminar', 'No se pudo eliminar el conductor. Inténtalo nuevamente.');
             }
         });
     };
@@ -141,34 +141,23 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
         setSearchQuery('');
     };
 
-    const getRoleBadgeVariant = (role: string) => {
-        switch (role) {
-            case 'admin':
-                return 'destructive' as const;
-            case 'conductor':
-                return 'default' as const;
-            case 'cliente':
-                return 'secondary' as const;
-            default:
-                return 'outline' as const;
-        }
-    };
+
 
     const getModalTitle = () => {
-        return selectedUser ? 'Editar Usuario' : 'Registrar Nuevo Usuario';
+        return selectedUser ? 'Editar Conductor' : 'Registrar Nuevo Conductor';
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Gestionar Usuarios" />
+            <Head title="Gestionar Conductores" />
 
             <div className="container mx-auto px-4 py-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <Heading
-                            title="Gestionar Usuarios"
-                            description="Administra todos los usuarios del sistema"
+                            title="Gestionar Conductores"
+                            description="Administra todos los conductores del sistema"
                         />
                     </div>
 
@@ -183,8 +172,8 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                             />
                         </div>
                         <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nuevo Usuario</span>
+                            <UserCheck className="mr-2 h-4 w-4" />
+                            <span className="sm:inline">Nuevo Conductor</span>
                         </Button>
                     </div>
                 </div>
@@ -206,11 +195,11 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                                     DNI: {user.dni}
                                                 </p>
                                             </div>
-                                            <div className="ml-2 flex-shrink-0">
-                                                <Badge variant={getRoleBadgeVariant(user.roles[0]?.name)}>
-                                                    {user.roles[0]?.name?.toUpperCase()}
-                                                </Badge>
-                                            </div>
+                                                                        <div className="ml-2 flex-shrink-0">
+                                <Badge variant="default">
+                                    CONDUCTOR
+                                </Badge>
+                            </div>
                                         </div>
 
                                         <div className="space-y-2 mb-4">
@@ -221,6 +210,16 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">{user.email}</p>
                                                 )}
                                             </div>
+
+                                            {user.driver && (
+                                                <div>
+                                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">Licencia:</span>
+                                                    <p className="text-sm font-medium text-foreground dark:text-foreground">{user.driver.license_number}</p>
+                                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                                        Tipo: {user.driver.license_type}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex justify-end">
@@ -260,7 +259,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                         <TableHead className="px-6 py-3">Nombre Completo</TableHead>
                                         <TableHead className="px-6 py-3">DNI</TableHead>
                                         <TableHead className="px-6 py-3">Contacto</TableHead>
-                                        <TableHead className="px-6 py-3">Rol</TableHead>
+                                        <TableHead className="px-6 py-3">Licencia</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -284,9 +283,16 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
-                                                <Badge variant={getRoleBadgeVariant(user.roles[0]?.name)}>
-                                                    {user.roles[0]?.name?.toUpperCase()}
-                                                </Badge>
+                                                {user.driver ? (
+                                                    <div className="space-y-1">
+                                                        <div className="text-sm font-medium">{user.driver.license_number}</div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Tipo: {user.driver.license_type}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">N/A</span>
+                                                )}
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
                                                 <DropdownMenu>
@@ -323,15 +329,15 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                         {(users?.data?.length === 0 || !users?.data) && (
                             <div className="text-center py-12">
                                 <Search className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
-                                <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
-                                    {filters?.search ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
-                                </h3>
-                                <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
-                                    {filters?.search
-                                        ? 'Intenta cambiar los criterios de búsqueda.'
-                                        : 'Comienza registrando tu primer usuario.'
-                                    }
-                                </p>
+                                                <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
+                    {filters?.search ? 'No se encontraron conductores' : 'No hay conductores registrados'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
+                    {filters?.search
+                        ? 'Intenta cambiar los criterios de búsqueda.'
+                        : 'Comienza registrando tu primer conductor.'
+                    }
+                </p>
                                 {filters?.search && (
                                     <Button
                                         variant="outline"
@@ -340,7 +346,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                             setSearchQuery('');
                                         }}
                                     >
-                                        Ver todos los usuarios
+                                        Ver todos los conductores
                                     </Button>
                                 )}
                             </div>
@@ -366,7 +372,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                 className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden cursor-pointer bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90"
                 size="icon"
             >
-                <UserPlus className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
+                <UserCheck className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
             </Button>
 
             {/* Modales */}
@@ -377,7 +383,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                 roles={roles}
                 title={getModalTitle()}
                 showRole={false}
-                defaultRole="admin"
+                defaultRole="conductor"
                 onSuccess={(message) => success('¡Éxito!', message)}
                 onError={(message) => error('Error', message)}
             />

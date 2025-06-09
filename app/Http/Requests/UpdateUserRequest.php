@@ -26,8 +26,8 @@ class UpdateUserRequest extends FormRequest
         $driverId = $this->route('user')->driver?->id;
 
         $rules = [
-            'first_name' => ['required', 'string', 'max:25'],
-            'last_name' => ['required', 'string', 'max:25'],
+            'first_name' => ['required', 'string', 'max:25', 'min:3'],
+            'last_name' => ['required', 'string', 'max:25', 'min:3'],
             'dni' => ['required', 'string', 'size:8', Rule::unique('users', 'dni')->ignore($userId)],
             'phone' => ['required', 'string', 'size:9'],
             'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($userId)],
@@ -77,6 +77,11 @@ class UpdateUserRequest extends FormRequest
             'dni.unique' => 'Este DNI ya está registrado.',
             'email.unique' => 'Este correo electrónico ya está registrado.',
             'license_number.unique' => 'Este número de licencia ya está registrado.',
+            'first_name.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'last_name.min' => 'El apellido debe tener al menos 3 caracteres.',
+            'first_name.max' => 'El nombre debe tener como máximo 25 caracteres.',
+            'last_name.max' => 'El apellido debe tener como máximo 25 caracteres.',
+            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
         ];
     }
 }

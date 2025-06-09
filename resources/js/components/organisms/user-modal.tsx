@@ -1,7 +1,6 @@
 import { UserForm } from '@/components/molecules/user-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { type User } from '@/types';
-import { router } from '@inertiajs/react';
 
 interface UserWithRelations extends User {
     roles?: Array<{ name: string }>;
@@ -35,39 +34,17 @@ export function UserModal({
     onError
 }: UserModalProps) {
 
-    const handleSubmit = (data: any) => {
-        if (user) {
-            // Actualizar usuario existente
-            router.put(route('usuarios.update', user.id), data, {
-                onSuccess: () => {
+    const handleSuccess = (message: string) => {
                     onClose();
-                    if (onSuccess) {
-                        onSuccess('Usuario actualizado exitosamente.');
+        // Solo mostrar toast si hay mensaje (para compatibilidad con casos que no usan flash messages)
+        if (onSuccess && message.trim()) {
+            onSuccess(message);
                     }
-                },
-                onError: (errors) => {
+    };
+
+    const handleError = (message: string) => {
                     if (onError) {
-                        const errorMessage = Object.values(errors).flat().join(' ');
-                        onError(errorMessage || 'Error al actualizar el usuario.');
-                    }
-                }
-            });
-        } else {
-            // Crear nuevo usuario
-            router.post(route('usuarios.store'), data, {
-                onSuccess: () => {
-                    onClose();
-                    if (onSuccess) {
-                        onSuccess('Usuario registrado exitosamente.');
-                    }
-                },
-                onError: (errors) => {
-                    if (onError) {
-                        const errorMessage = Object.values(errors).flat().join(' ');
-                        onError(errorMessage || 'Error al registrar el usuario.');
-                    }
-                }
-            });
+            onError(message);
         }
     };
 
@@ -87,7 +64,8 @@ export function UserModal({
                 <UserForm
                     user={user || undefined}
                     roles={roles}
-                    onSubmit={handleSubmit}
+                    onSuccess={handleSuccess}
+                    onError={handleError}
                     showRole={showRole}
                     defaultRole={defaultRole}
                 />

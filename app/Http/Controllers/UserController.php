@@ -8,17 +8,21 @@ use App\Models\User;
 use App\Models\Driver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
     /**
-     * Display a listing of users.
+     * Display a listing of users (only admins).
      */
     public function index(Request $request)
     {
-        $query = User::with(['roles', 'driver']);
+        $query = User::with(['roles', 'driver'])
+                    ->whereHas('roles', function ($q) {
+                        $q->where('name', 'admin');
+                    });
 
         // Aplicar filtro de búsqueda si existe
         if ($request->has('search') && !empty($request->search)) {
@@ -28,18 +32,15 @@ class UserController extends Controller
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('dni', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhereHas('roles', function ($roleQuery) use ($search) {
-                      $roleQuery->where('name', 'like', "%{$search}%");
-                  });
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
         $users = $query->orderBy('created_at', 'desc')
-                      ->paginate(5)
+                      ->paginate(10)
                       ->withQueryString(); // Mantener parámetros de búsqueda en los links de paginación
 
-        $roles = Role::all();
+        $roles = Role::where('name', 'admin')->get();
 
         return Inertia::render('usuarios/gestionar', [
             'users' => $users,
@@ -91,8 +92,16 @@ class UserController extends Controller
             ]);
         }
 
+        // Redirigir según el rol del usuario creado
+        $redirectRoute = match ($validated['role']) {
+            'cliente' => 'usuarios.gestionar-clientes',
+            'conductor' => 'usuarios.gestionar-conductores',
+            'admin' => 'usuarios.gestionar',
+            default => 'usuarios.gestionar'
+        };
+
         return redirect()
-            ->route('usuarios.gestionar')
+            ->route($redirectRoute)
             ->with('success', 'Usuario registrado exitosamente.');
     }
 
@@ -171,26 +180,45 @@ class UserController extends Controller
             }
         }
 
+        // Redirigir según el rol del usuario actualizado
+        $redirectRoute = match ($validated['role']) {
+            'cliente' => 'usuarios.gestionar-clientes',
+            'conductor' => 'usuarios.gestionar-conductores',
+            'admin' => 'usuarios.gestionar',
+            default => 'usuarios.gestionar'
+        };
+
         return redirect()
-            ->route('usuarios.gestionar')
+            ->route($redirectRoute)
             ->with('success', 'Usuario actualizado exitosamente.');
     }
 
     /**
      * Remove the specified user from storage.
      */
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
         try {
             $userName = $user->first_name . ' ' . $user->last_name;
+
+            // Obtener el rol del usuario antes de eliminarlo
+            $userRole = $user->roles->first()?->name ?? 'admin';
+
             $user->delete();
 
+            // Determinar la ruta de redirección basada en el rol del usuario eliminado
+            $redirectRoute = match ($userRole) {
+                'cliente' => 'usuarios.gestionar-clientes',
+                'conductor' => 'usuarios.gestionar-conductores',
+                'admin' => 'usuarios.gestionar',
+                default => 'usuarios.gestionar'
+            };
+
             return redirect()
-                ->route('usuarios.gestionar')
+                ->route($redirectRoute)
                 ->with('success', "Usuario {$userName} eliminado exitosamente.");
         } catch (\Exception $e) {
-            return redirect()
-                ->route('usuarios.gestionar')
+            return back()
                 ->with('error', 'No se pudo eliminar el usuario. Inténtalo nuevamente.');
         }
     }
@@ -209,5 +237,75 @@ class UserController extends Controller
     public function registrarConductor()
     {
         return Inertia::render('usuarios/registrar-conductor');
+    }
+
+    /**
+     * Display a listing of clients only.
+     */
+    public function gestionarClientes(Request $request)
+    {
+        $query = User::with(['roles', 'driver'])
+                    ->whereHas('roles', function ($q) {
+                        $q->where('name', 'cliente');
+                    });
+
+        // Aplicar filtro de búsqueda si existe
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('dni', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->orderBy('created_at', 'desc')
+                      ->paginate(5)
+                      ->withQueryString();
+
+        $roles = Role::where('name', 'cliente')->get();
+
+        return Inertia::render('usuarios/gestionar-clientes', [
+            'users' => $users,
+            'roles' => $roles,
+            'filters' => $request->only(['search']),
+        ]);
+    }
+
+    /**
+     * Display a listing of drivers only.
+     */
+    public function gestionarConductores(Request $request)
+    {
+        $query = User::with(['roles', 'driver'])
+                    ->whereHas('roles', function ($q) {
+                        $q->where('name', 'conductor');
+                    });
+
+        // Aplicar filtro de búsqueda si existe
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('dni', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->orderBy('created_at', 'desc')
+                      ->paginate(5)
+                      ->withQueryString();
+
+        $roles = Role::where('name', 'conductor')->get();
+
+        return Inertia::render('usuarios/gestionar-conductores', [
+            'users' => $users,
+            'roles' => $roles,
+            'filters' => $request->only(['search']),
+        ]);
     }
 }

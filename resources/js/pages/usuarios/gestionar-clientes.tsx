@@ -49,12 +49,12 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/usuarios',
     },
     {
-        title: 'Gestionar Usuarios',
-        href: '/usuarios/gestionar',
+        title: 'Gestionar Clientes',
+        href: '/usuarios/gestionar-clientes',
     },
 ];
 
-export default function GestionarUsuarios({ users, roles, filters }: Props) {
+export default function GestionarClientes({ users, roles, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -74,7 +74,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchQuery !== (filters?.search || '')) {
-                router.get(route('usuarios.gestionar'),
+                router.get(route('usuarios.gestionar-clientes'),
                     searchQuery ? { search: searchQuery } : {},
                     {
                         preserveState: true,
@@ -132,7 +132,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
             },
             onError: () => {
                 setDeleteModal(prev => ({ ...prev, isDeleting: false }));
-                error('Error al eliminar', 'No se pudo eliminar el usuario. Inténtalo nuevamente.');
+                error('Error al eliminar', 'No se pudo eliminar el cliente. Inténtalo nuevamente.');
             }
         });
     };
@@ -141,34 +141,23 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
         setSearchQuery('');
     };
 
-    const getRoleBadgeVariant = (role: string) => {
-        switch (role) {
-            case 'admin':
-                return 'destructive' as const;
-            case 'conductor':
-                return 'default' as const;
-            case 'cliente':
-                return 'secondary' as const;
-            default:
-                return 'outline' as const;
-        }
-    };
+
 
     const getModalTitle = () => {
-        return selectedUser ? 'Editar Usuario' : 'Registrar Nuevo Usuario';
+        return selectedUser ? 'Editar Cliente' : 'Registrar Nuevo Cliente';
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Gestionar Usuarios" />
+            <Head title="Gestionar Clientes" />
 
             <div className="container mx-auto px-4 py-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <Heading
-                            title="Gestionar Usuarios"
-                            description="Administra todos los usuarios del sistema"
+                            title="Gestionar Clientes"
+                            description="Administra todos los clientes del sistema"
                         />
                     </div>
 
@@ -184,7 +173,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                         </div>
                         <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
                             <UserPlus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nuevo Usuario</span>
+                            <span className="sm:inline">Nuevo Cliente</span>
                         </Button>
                     </div>
                 </div>
@@ -206,11 +195,11 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                                     DNI: {user.dni}
                                                 </p>
                                             </div>
-                                            <div className="ml-2 flex-shrink-0">
-                                                <Badge variant={getRoleBadgeVariant(user.roles[0]?.name)}>
-                                                    {user.roles[0]?.name?.toUpperCase()}
-                                                </Badge>
-                                            </div>
+                                                                        <div className="ml-2 flex-shrink-0">
+                                <Badge variant="secondary">
+                                    CLIENTE
+                                </Badge>
+                            </div>
                                         </div>
 
                                         <div className="space-y-2 mb-4">
@@ -260,7 +249,6 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                         <TableHead className="px-6 py-3">Nombre Completo</TableHead>
                                         <TableHead className="px-6 py-3">DNI</TableHead>
                                         <TableHead className="px-6 py-3">Contacto</TableHead>
-                                        <TableHead className="px-6 py-3">Rol</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -283,11 +271,8 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="px-6 py-4">
-                                                <Badge variant={getRoleBadgeVariant(user.roles[0]?.name)}>
-                                                    {user.roles[0]?.name?.toUpperCase()}
-                                                </Badge>
-                                            </TableCell>
+
+
                                             <TableCell className="px-6 py-4">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -323,15 +308,15 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                         {(users?.data?.length === 0 || !users?.data) && (
                             <div className="text-center py-12">
                                 <Search className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
-                                <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
-                                    {filters?.search ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
-                                </h3>
-                                <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
-                                    {filters?.search
-                                        ? 'Intenta cambiar los criterios de búsqueda.'
-                                        : 'Comienza registrando tu primer usuario.'
-                                    }
-                                </p>
+                                                <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
+                    {filters?.search ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
+                    {filters?.search
+                        ? 'Intenta cambiar los criterios de búsqueda.'
+                        : 'Comienza registrando tu primer cliente.'
+                    }
+                </p>
                                 {filters?.search && (
                                     <Button
                                         variant="outline"
@@ -340,7 +325,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                                             setSearchQuery('');
                                         }}
                                     >
-                                        Ver todos los usuarios
+                                        Ver todos los clientes
                                     </Button>
                                 )}
                             </div>
@@ -377,7 +362,7 @@ export default function GestionarUsuarios({ users, roles, filters }: Props) {
                 roles={roles}
                 title={getModalTitle()}
                 showRole={false}
-                defaultRole="admin"
+                defaultRole="cliente"
                 onSuccess={(message) => success('¡Éxito!', message)}
                 onError={(message) => error('Error', message)}
             />

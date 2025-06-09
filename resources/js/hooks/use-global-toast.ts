@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
-import { usePage } from '@inertiajs/react';
+import { useState, useCallback } from 'react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -15,7 +14,6 @@ let toastId = 0;
 
 export function useGlobalToast() {
     const [toasts, setToasts] = useState<ToastItem[]>([]);
-    const { props } = usePage();
 
     const addToast = useCallback((
         type: ToastType,
@@ -68,26 +66,8 @@ export function useGlobalToast() {
         setToasts([]);
     }, []);
 
-    // Manejar flash messages automáticamente
-    useEffect(() => {
-        const flash = props.flash as any;
-
-        if (flash?.success) {
-            success('¡Éxito!', flash.success);
-        }
-
-        if (flash?.error) {
-            error('Error', flash.error);
-        }
-
-        if (flash?.warning) {
-            warning('Advertencia', flash.warning);
-        }
-
-        if (flash?.info) {
-            info('Información', flash.info);
-        }
-    }, [props.flash, success, error, warning, info]);
+    // Los flash messages se manejan automáticamente en GlobalToastManager
+    // Este hook solo proporciona métodos para mostrar toasts manuales
 
     return {
         toasts,

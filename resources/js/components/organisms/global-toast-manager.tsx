@@ -42,7 +42,6 @@ export function GlobalToastManager() {
     // Manejar flash messages del servidor automáticamente
     useEffect(() => {
         const flash = props.flash as FlashMessages;
-        console.log('Flash messages:', flash); // Debug log
 
         if (flash?.success) {
             addToast('success', '¡Éxito!', flash.success);

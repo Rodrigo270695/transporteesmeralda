@@ -14,7 +14,8 @@ import {
     FileText,
     BarChart3,
     Package,
-    UserCheck
+    UserCheck,
+    Truck
 } from 'lucide-react';
 import AppLogo from '@/components/atoms/app-logo';
 
@@ -29,29 +30,29 @@ const mainNavItems: NavItem[] = [
         icon: Users,
         items: [
             {
-                title: 'Registrar Cliente',
-                href: '/usuarios/registrar-cliente',
-                icon: UserPlus,
-            },
-            {
-                title: 'Registrar Conductor',
-                href: '/usuarios/registrar-conductor',
-                icon: UserCheck,
-            },
-            {
                 title: 'Gestionar Usuarios',
                 href: '/usuarios/gestionar',
                 icon: Users,
+            },
+            {
+                title: 'Gestionar Clientes',
+                href: '/usuarios/gestionar-clientes',
+                icon: UserPlus,
+            },
+            {
+                title: 'Gestionar Conductores',
+                href: '/usuarios/gestionar-conductores',
+                icon: UserCheck,
             }
         ]
     },
     {
         title: 'Transportes',
-        icon: Package,
+        icon: Truck,
         items: [
             {
-                title: 'Vehículos',
-                href: '/transportes/vehiculos',
+                title: 'Movilidad',
+                href: '/movilidad/gestionar',
                 icon: Package
             },
             {
@@ -71,14 +72,14 @@ const mainNavItems: NavItem[] = [
         icon: Package,
         items: [
             {
-                title: 'Reservas',
-                href: '/gestion/reservas',
-                icon: Calendar,
+                title: 'Formas de Pago',
+                href: '/formas-pago/gestionar',
+                icon: DollarSign
             },
             {
-                title: 'Facturación',
-                href: '/gestion/facturacion',
-                icon: DollarSign
+                title: 'Entregas',
+                href: '/entregas/gestionar',
+                icon: Truck
             }
         ]
     },

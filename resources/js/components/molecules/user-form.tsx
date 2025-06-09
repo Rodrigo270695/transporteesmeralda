@@ -2,6 +2,7 @@ import { SimpleInput } from '@/components/atoms/simple-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import InputError from '@/components/molecules/input-error';
 import { type User } from '@/types';
 import { useForm } from '@inertiajs/react';
 import { User as UserIcon, Mail, Phone, IdCard, Lock, Eye, EyeOff, CreditCard } from 'lucide-react';
@@ -10,7 +11,9 @@ import { useState } from 'react';
 interface UserFormProps {
     user?: User & { driver?: any };
     roles?: Array<{ id: number; name: string }>;
-    onSubmit: (data: any) => void;
+    onSubmit?: (data: any) => void;
+    onSuccess?: (message: string) => void;
+    onError?: (message: string) => void;
     isLoading?: boolean;
     showRole?: boolean;
     defaultRole?: string;
@@ -20,11 +23,13 @@ export function UserForm({
     user,
     roles = [],
     onSubmit,
+    onSuccess,
+    onError,
     isLoading = false,
     showRole = true,
     defaultRole = 'cliente'
 }: UserFormProps) {
-    const { data, setData, errors, processing } = useForm({
+    const { data, setData, errors, processing, post, put } = useForm({
         first_name: user?.first_name || '',
         last_name: user?.last_name || '',
         dni: user?.dni || '',
@@ -46,7 +51,48 @@ export function UserForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (onSubmit) {
+            // Si se pasa onSubmit, usar el comportamiento anterior
         onSubmit(data);
+        } else {
+            // Manejar la petición internamente usando useForm
+            if (user) {
+                // Actualizar usuario existente
+                put(route('usuarios.update', user.id), {
+                    onSuccess: () => {
+                        // El mensaje flash se maneja automáticamente por GlobalToastManager
+                        // Solo cerramos el modal si se pasa onSuccess
+                        if (onSuccess) {
+                            onSuccess('');  // Mensaje vacío, solo para cerrar modal
+                        }
+                    },
+                    onError: () => {
+                        // Los errores se manejan automáticamente por useForm y se muestran en el formulario
+                        if (onError) {
+                            onError('Error al actualizar el usuario. Revisa los campos resaltados.');
+                        }
+                    }
+                });
+            } else {
+                // Crear nuevo usuario
+                post(route('usuarios.store'), {
+                    onSuccess: () => {
+                        // El mensaje flash se maneja automáticamente por GlobalToastManager
+                        // Solo cerramos el modal si se pasa onSuccess
+                        if (onSuccess) {
+                            onSuccess('');  // Mensaje vacío, solo para cerrar modal
+                        }
+                    },
+                    onError: () => {
+                        // Los errores se manejan automáticamente por useForm y se muestran en el formulario
+                        if (onError) {
+                            onError('Error al registrar el usuario. Revisa los campos resaltados.');
+                        }
+                    }
+                });
+            }
+        }
     };
 
     const showDriverFields = data.role === 'conductor';
@@ -110,7 +156,7 @@ export function UserForm({
                         placeholder="Ingresa el nombre"
                     />
                     {errors.first_name && (
-                        <p className="text-sm text-destructive">{errors.first_name}</p>
+                        <InputError message={errors.first_name} />
                     )}
                 </div>
 
@@ -127,7 +173,7 @@ export function UserForm({
                         placeholder="Ingresa el apellido"
                     />
                     {errors.last_name && (
-                        <p className="text-sm text-destructive">{errors.last_name}</p>
+                        <InputError message={errors.last_name} />
                     )}
                 </div>
             </div>
@@ -148,7 +194,7 @@ export function UserForm({
                         rightElement={dniCounter}
                     />
                     {errors.dni && (
-                        <p className="text-sm text-destructive">{errors.dni}</p>
+                        <InputError message={errors.dni} />
                     )}
                 </div>
 
@@ -167,7 +213,7 @@ export function UserForm({
                         rightElement={phoneCounter}
                     />
                     {errors.phone && (
-                        <p className="text-sm text-destructive">{errors.phone}</p>
+                        <InputError message={errors.phone} />
                     )}
                 </div>
             </div>
@@ -183,7 +229,7 @@ export function UserForm({
                     placeholder="Ingresa el correo electrónico (opcional)"
                 />
                 {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
+                <InputError message={errors.email} />
                 )}
             </div>
 
@@ -202,7 +248,7 @@ export function UserForm({
                     rightElement={passwordToggle}
                 />
                 {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
+                    <InputError message={errors.password} />
                 )}
             </div>
 
@@ -222,7 +268,7 @@ export function UserForm({
                         </SelectContent>
                     </Select>
                     {errors.role && (
-                        <p className="text-sm text-destructive">{errors.role}</p>
+                        <InputError message={errors.role} />
                     )}
                 </div>
             )}
@@ -245,7 +291,7 @@ export function UserForm({
                                 required
                             />
                             {errors.license_number && (
-                                <p className="text-sm text-destructive">{errors.license_number}</p>
+                                <InputError message={errors.license_number} />
                             )}
                         </div>
 
@@ -267,7 +313,7 @@ export function UserForm({
                                 </SelectContent>
                             </Select>
                             {errors.license_type && (
-                                <p className="text-sm text-destructive">{errors.license_type}</p>
+                                <InputError message={errors.license_type} />
                             )}
                         </div>
                     </div>
