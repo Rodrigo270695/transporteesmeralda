@@ -98,13 +98,141 @@ export default function GestionarPuntosEntrega({
         point: null,
         isDeleting: false
     });
+    const [showRoutes, setShowRoutes] = useState(true);
+    const [loadingRoutes, setLoadingRoutes] = useState(false);
+    const [showLegend, setShowLegend] = useState(true);
+    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
     const routeLineRef = useRef<any>(null);
+    const routeLinesRef = useRef<any[]>([]); // Para múltiples segmentos de ruta
 
     const { success, error } = useGlobalToast();
+
+    // Función para obtener ruta entre dos puntos usando OSRM
+    const getRouteCoordinates = async (startPoint: {lat: number, lng: number}, endPoint: {lat: number, lng: number}) => {
+        try {
+            const response = await fetch(
+                `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${endPoint.lng},${endPoint.lat}?overview=full&geometries=geojson`
+            );
+
+            if (!response.ok) {
+                throw new Error('Error al obtener la ruta');
+            }
+
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                // Convertir coordenadas de [lng, lat] a [lat, lng] para Leaflet
+                return data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+            }
+
+            return null;
+        } catch (error) {
+            console.warn('Error obteniendo ruta:', error);
+            return null;
+        }
+    };
+
+    // Función para dibujar rutas reales entre los puntos
+    const drawRealRoutes = async (sortedPoints: DeliveryPoint[]) => {
+        if (sortedPoints.length < 2 || !showRoutes) return;
+
+        setLoadingRoutes(true);
+
+        // Agregar la ubicación actual como punto de inicio si existe
+        let routePoints = sortedPoints;
+        if (userLocation) {
+            // Crear punto virtual para la ubicación actual
+            const currentLocationPoint = {
+                coordinates: { latitude: userLocation.lat, longitude: userLocation.lng },
+                route_order: 0
+            };
+            routePoints = [currentLocationPoint as any, ...sortedPoints];
+        }
+
+        // Dibujar ruta entre cada par de puntos consecutivos
+        for (let i = 0; i < routePoints.length - 1; i++) {
+            const currentPoint = routePoints[i];
+            const nextPoint = routePoints[i + 1];
+
+            if (currentPoint.coordinates && nextPoint.coordinates) {
+                const startCoords = {
+                    lat: currentPoint.coordinates.latitude,
+                    lng: currentPoint.coordinates.longitude
+                };
+                const endCoords = {
+                    lat: nextPoint.coordinates.latitude,
+                    lng: nextPoint.coordinates.longitude
+                };
+
+                // Obtener ruta real entre los puntos
+                const routeCoordinates = await getRouteCoordinates(startCoords, endCoords);
+
+                if (routeCoordinates) {
+                    // Dibujar segmento de ruta
+                    const routeLine = window.L.polyline(routeCoordinates, {
+                        color: i === 0 && userLocation ? '#10b981' : '#6366f1', // Verde para la primera ruta desde ubicación actual
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: i === 0 && userLocation ? '5, 5' : undefined // Línea punteada para la ruta desde ubicación actual
+                    }).addTo(mapInstance.current);
+
+                    // Agregar popup con información del segmento
+                    const segmentInfo = userLocation && i === 0
+                        ? `Ruta desde tu ubicación → ${nextPoint.point_name || `Punto ${nextPoint.route_order}`}`
+                        : `Ruta: ${currentPoint.point_name || `Punto ${currentPoint.route_order}`} → ${nextPoint.point_name || `Punto ${nextPoint.route_order}`}`;
+
+                    routeLine.bindPopup(`
+                        <div class="text-sm">
+                            <strong>${segmentInfo}</strong>
+                        </div>
+                    `);
+
+                    routeLinesRef.current.push(routeLine);
+                } else {
+                    // Si no se puede obtener la ruta, dibujar línea recta como fallback
+                    const fallbackLine = window.L.polyline([
+                        [startCoords.lat, startCoords.lng],
+                        [endCoords.lat, endCoords.lng]
+                    ], {
+                        color: '#ef4444',
+                        weight: 2,
+                        opacity: 0.6,
+                        dashArray: '10, 10'
+                    }).addTo(mapInstance.current);
+
+                    fallbackLine.bindPopup(`
+                        <div class="text-sm">
+                            <strong>Ruta no disponible</strong><br>
+                            <span class="text-red-600">Línea recta aproximada</span>
+                        </div>
+                    `);
+
+                    routeLinesRef.current.push(fallbackLine);
+                }
+
+                // Pequeña pausa para no sobrecargar la API
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        setLoadingRoutes(false);
+    };
+
+    // Función para alternar la visualización de rutas
+    const toggleRoutes = () => {
+        if (showRoutes) {
+            // Ocultar rutas
+            routeLinesRef.current.forEach(line => {
+                mapInstance.current.removeLayer(line);
+            });
+            routeLinesRef.current = [];
+        }
+        setShowRoutes(!showRoutes);
+    };
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -216,19 +344,33 @@ export default function GestionarPuntosEntrega({
                 }
             });
 
-            // Limpiar línea de ruta existente
+            // Limpiar líneas de ruta existentes
             if (routeLineRef.current) {
                 mapInstance.current.removeLayer(routeLineRef.current);
                 routeLineRef.current = null;
             }
+            routeLinesRef.current.forEach(line => {
+                mapInstance.current.removeLayer(line);
+            });
+            routeLinesRef.current = [];
 
             const validPoints = points.filter(p => p.coordinates?.latitude && p.coordinates?.longitude);
 
+            // Definir colores por status
+            const getStatusColor = (status: string) => {
+                switch (status) {
+                    case 'entregado': return '#10b981';    // Verde
+                    case 'en_ruta': return '#3b82f6';      // Azul
+                    case 'cancelado': return '#ef4444';    // Rojo
+                    case 'reagendado': return '#8b5cf6';   // Púrpura
+                    case 'pendiente':
+                    default: return '#f59e0b';             // Amarillo/Naranja
+                }
+            };
+
             // Agregar nuevos marcadores
             validPoints.forEach((point, index) => {
-                const color = point.status === 'entregado' ? '#10b981' :
-                              point.status === 'en_ruta' ? '#3b82f6' :
-                              point.status === 'cancelado' ? '#ef4444' : '#f59e0b';
+                const color = getStatusColor(point.status);
 
                 const marker = window.L.circleMarker(
                     [point.coordinates.latitude, point.coordinates.longitude],
@@ -339,21 +481,34 @@ export default function GestionarPuntosEntrega({
                 markersRef.current.push(numberMarker);
             });
 
-            // Crear línea de ruta conectando los puntos en orden
-            if (validPoints.length > 1) {
-                const routeCoordinates = validPoints
-                    .sort((a, b) => a.route_order - b.route_order)
-                    .map(point => [point.coordinates.latitude, point.coordinates.longitude]);
-
-                routeLineRef.current = window.L.polyline(routeCoordinates, {
-                    color: '#6366f1',
-                    weight: 3,
-                    opacity: 0.7,
-                    dashArray: '10, 10'
-                }).addTo(mapInstance.current);
+            // Dibujar rutas reales por las calles entre los puntos
+            if (validPoints.length > 0) {
+                const sortedPoints = validPoints.sort((a, b) => a.route_order - b.route_order);
+                drawRealRoutes(sortedPoints);
             }
         }
     }, [points, mapInstance.current]);
+
+    // Efecto para redibujar rutas cuando se activa la opción
+    useEffect(() => {
+        if (showRoutes && mapInstance.current && points.length > 0) {
+            const validPoints = points.filter(p => p.coordinates?.latitude && p.coordinates?.longitude);
+            if (validPoints.length > 0) {
+                const sortedPoints = validPoints.sort((a, b) => a.route_order - b.route_order);
+                drawRealRoutes(sortedPoints);
+            }
+        }
+    }, [showRoutes]);
+
+    // Efecto para redimensionar el mapa cuando cambia el modo pantalla completa
+    useEffect(() => {
+        if (mapInstance.current) {
+            // Pequeño delay para que el DOM se actualice antes de redimensionar
+            setTimeout(() => {
+                mapInstance.current.invalidateSize();
+            }, 100);
+        }
+    }, [isFullScreen]);
 
     // Cargar puntos de entrega
     const loadPoints = async () => {
@@ -450,7 +605,9 @@ export default function GestionarPuntosEntrega({
         entregados: points.filter(p => p.status === 'entregado').length,
         enRuta: points.filter(p => p.status === 'en_ruta').length,
         pendientes: points.filter(p => p.status === 'pendiente').length,
-                        totalAmountToCollect: points.reduce((sum, point) => {
+        cancelados: points.filter(p => p.status === 'cancelado').length,
+        reagendados: points.filter(p => p.status === 'reagendado').length,
+        totalAmountToCollect: points.reduce((sum, point) => {
             let amount = 0;
             if (point.amount_to_collect?.amount) {
                 // Convertir a número (maneja tanto string como number)
@@ -464,7 +621,7 @@ export default function GestionarPuntosEntrega({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Puntos de Entrega - ${delivery.name}`} />
 
-            {/* CSS específico para z-index de modales */}
+            {/* CSS específico para z-index de modales y controles del mapa */}
             <style dangerouslySetInnerHTML={{
                 __html: `
                     /* Asegurar que todos los modales aparezcan encima del mapa */
@@ -478,15 +635,38 @@ export default function GestionarPuntosEntrega({
                     [data-radix-select-content] {
                         z-index: 10002 !important;
                     }
+                    /* Controles y leyenda del mapa - por encima de Leaflet */
+                    .map-legend {
+                        z-index: 9999 !important;
+                        position: absolute !important;
+                    }
+                    .map-controls {
+                        z-index: 9999 !important;
+                        position: absolute !important;
+                    }
+                    /* Asegurar que el contenedor del mapa tenga z-index bajo */
+                    .leaflet-container {
+                        z-index: 1 !important;
+                    }
+                    .leaflet-control-container {
+                        z-index: 100 !important;
+                    }
+                    /* Forzar todos los elementos del mapa a estar por debajo */
+                    .leaflet-pane {
+                        z-index: 1 !important;
+                    }
+                    .leaflet-map-pane {
+                        z-index: 1 !important;
+                    }
                 `
             }} />
 
             <div className="h-screen flex flex-col">
                 {/* Header */}
-                <div className="bg-white border-b px-6 py-4 flex-shrink-0">
-                    <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-4">
-                            <div>
+                <div className="bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                            <div className="min-w-0 flex-1">
                                 <Heading
                                     title="Puntos de Entrega"
                                     description={`${delivery.name} • ${formatDate(delivery.delivery_date)}`}
@@ -494,36 +674,59 @@ export default function GestionarPuntosEntrega({
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            {/* Botones de control de mapa */}
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                            {/* Botón móvil para mostrar sidebar */}
+                            <Button
+                                onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                                variant="outline"
+                                size="sm"
+                                className="md:hidden cursor-pointer"
+                            >
+                                <MapPin className="h-4 w-4" />
+                            </Button>
+
+                            {/* Botones de control - ocultos en móvil */}
                             <Button
                                 onClick={() => setIsFullScreen(!isFullScreen)}
                                 variant="outline"
-                                className="cursor-pointer"
+                                size="sm"
+                                className="hidden sm:flex cursor-pointer"
                             >
                                 {isFullScreen ? (
-                                    <Minimize2 className="mr-2 h-4 w-4" />
+                                    <Minimize2 className="mr-1 sm:mr-2 h-4 w-4" />
                                 ) : (
-                                    <Maximize2 className="mr-2 h-4 w-4" />
+                                    <Maximize2 className="mr-1 sm:mr-2 h-4 w-4" />
                                 )}
-                                {isFullScreen ? 'Panel' : 'Pantalla Completa'}
+                                <span className="hidden sm:inline">
+                                    {isFullScreen ? 'Panel' : 'Pantalla Completa'}
+                                </span>
                             </Button>
 
                             <Button
                                 onClick={() => setCreateModalOpen(true)}
+                                size="sm"
                                 className="cursor-pointer"
                             >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Agregar Punto
+                                <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+                                <span className="hidden sm:inline">Agregar Punto</span>
+                                <span className="sm:hidden">Agregar</span>
                             </Button>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Content - Solo Mapa */}
-                <div className="flex-1 flex overflow-hidden">
+                                {/* Overlay para cerrar sidebar en móvil */}
+                {showMobileSidebar && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+                        onClick={() => setShowMobileSidebar(false)}
+                    />
+                )}
+
+                {/* Main Content - Responsive */}
+                <div className="flex-1 flex overflow-hidden relative min-h-0">
                     {/* Mapa */}
-                    <div className={`relative ${isFullScreen ? 'w-full' : 'flex-1'}`}>
+                    <div className={`relative ${isFullScreen ? 'w-full' : 'flex-1 md:flex-1'} ${showMobileSidebar ? 'hidden md:block' : 'block'}`}>
                         <div
                             ref={mapRef}
                             className="w-full h-full"
@@ -541,29 +744,156 @@ export default function GestionarPuntosEntrega({
                             </div>
                         )}
 
-                        {/* Controles flotantes del mapa */}
-                        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 space-y-2">
+                                                                                                {/* Control de leyenda - Solo desktop */}
+                        <div
+                            className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 map-controls hidden md:block"
+                            style={{ zIndex: 9999 }}
+                        >
                             <Button
-                                onClick={() => {
-                                    if (mapInstance.current && userLocation) {
-                                        mapInstance.current.setView([userLocation.lat, userLocation.lng], 13);
-                                    }
-                                }}
-                                variant="outline"
+                                onClick={() => setShowLegend(!showLegend)}
+                                variant={showLegend ? "default" : "outline"}
                                 size="sm"
-                                className="w-full cursor-pointer"
-                                title="Centrar en mi ubicación"
+                                className="cursor-pointer"
+                                title={showLegend ? "Ocultar leyenda" : "Mostrar leyenda"}
                             >
-                                <LocateFixed className="h-4 w-4" />
+                                <MapPin className="h-4 w-4" />
                             </Button>
                         </div>
+
+                                                {/* Panel de información en pantalla completa */}
+                        {isFullScreen && (
+                            <div
+                                className="absolute bottom-4 left-4 right-4 md:right-auto bg-white rounded-lg shadow-lg p-3 md:p-4 max-w-full md:max-w-sm map-controls"
+                                style={{ zIndex: 9999 }}
+                            >
+                                <div className="text-sm">
+                                    <div className="font-semibold mb-2 text-xs md:text-sm">{delivery.name}</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span className="text-muted-foreground">Total:</span>
+                                            <span className="font-medium ml-1">{stats.total} puntos</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground">Entregados:</span>
+                                            <span className="font-medium ml-1 text-green-600">{stats.entregados}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground">En ruta:</span>
+                                            <span className="font-medium ml-1 text-blue-600">{stats.enRuta}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-muted-foreground">Pendientes:</span>
+                                            <span className="font-medium ml-1 text-yellow-600">{stats.pendientes}</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t">
+                                        <span className="text-muted-foreground">Total a cobrar:</span>
+                                        <span className="font-medium ml-1">S/ {stats.totalAmountToCollect.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                                                {/* Leyenda de Estados - Responsive */}
+                        {showLegend && (
+                            <div
+                                className="absolute top-4 left-4 md:top-20 md:left-4 bg-white rounded-lg shadow-lg p-2 md:p-3 max-w-xs md:max-w-sm border map-legend"
+                                style={{ zIndex: 9999 }}
+                            >
+                                <div className="flex items-center justify-between mb-1 md:mb-2">
+                                    <h4 className="text-xs md:text-sm font-semibold">Estado de Puntos</h4>
+                                    <Button
+                                        onClick={() => setShowLegend(false)}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 md:h-6 md:w-6 p-0 text-gray-400 hover:text-gray-600"
+                                    >
+                                        ×
+                                    </Button>
+                                </div>
+                                <div className="space-y-1 md:space-y-2 text-xs">
+                                    <div className="flex items-center gap-2">
+                                                                                <div
+                                            className="w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: '#10b981' }}
+                                        ></div>
+                                        <span>Entregado</span>
+                                        <span className="text-muted-foreground">({stats.entregados})</span>
+                                    </div>
+                                                                        <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: '#3b82f6' }}
+                                        ></div>
+                                        <span>En Ruta</span>
+                                        <span className="text-muted-foreground">({stats.enRuta})</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: '#f59e0b' }}
+                                        ></div>
+                                        <span>Pendiente</span>
+                                        <span className="text-muted-foreground">({stats.pendientes})</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: '#ef4444' }}
+                                        ></div>
+                                        <span>Cancelado</span>
+                                        <span className="text-muted-foreground">({stats.cancelados})</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: '#8b5cf6' }}
+                                        ></div>
+                                        <span>Reagendado</span>
+                                        <span className="text-muted-foreground">({stats.reagendados})</span>
+                                    </div>
+                                </div>
+                                <div className="mt-1 md:mt-2 pt-1 md:pt-2 border-t text-xs text-center">
+                                    <span className="text-muted-foreground">Total: </span>
+                                    <span className="font-semibold">{stats.total} puntos</span>
+                                </div>
+                            </div>
+                        )}
+
+
                     </div>
 
-                    {/* Panel Lateral */}
-                    <div className="w-96 bg-background border-r flex flex-col h-full">
+                                        {/* Panel Lateral - Responsive */}
+                    {!isFullScreen && (
+                        <div className={`
+                            ${showMobileSidebar ? 'block' : 'hidden'}
+                            md:block
+                            w-full md:w-96
+                            bg-background
+                            border-r
+                            flex flex-col
+                            h-full md:h-full
+                            absolute md:relative
+                            top-0 left-0
+                            z-40 md:z-auto
+                            max-h-screen md:max-h-none
+                        `}>
+
+                        {/* Header móvil para cerrar sidebar */}
+                        <div className="md:hidden flex items-center justify-between p-4 border-b bg-white">
+                            <h3 className="text-lg font-semibold">Puntos de Entrega</h3>
+                            <Button
+                                onClick={() => setShowMobileSidebar(false)}
+                                variant="ghost"
+                                size="sm"
+                                className="p-2"
+                            >
+                                ×
+                            </Button>
+                        </div>
 
                         {/* Stats Summary */}
-                        <div className="flex-shrink-0 p-4 border-b">
+                        <div className="flex-shrink-0 p-3 md:p-4 border-b bg-white">
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <Card>
                                     <div className="p-3 text-center">
@@ -589,7 +919,7 @@ export default function GestionarPuntosEntrega({
                         </div>
 
                         {/* Points List */}
-                        <div className="flex-1 overflow-y-auto p-4">
+                        <div className="overflow-y-auto p-3 md:p-4" style={{ height: 'calc(100vh - 280px)' }}>
                             <DraggablePointsList
                                 points={points}
                                 onReorder={async (reorderedPoints) => {
@@ -663,6 +993,7 @@ export default function GestionarPuntosEntrega({
                             />
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
 
