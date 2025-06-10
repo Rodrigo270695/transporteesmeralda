@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Heading, SearchInput, Pagination } from '@/components/molecules';
-import { DeliveryModal } from '@/components/organisms/delivery-modal';
+import { SellerModal } from '@/components/organisms/seller-modal';
 import { DeleteConfirmationModal } from '@/components/organisms/delete-confirmation-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,22 +9,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, Search, Truck, MapPin } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, Trash2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
-interface Delivery {
+interface Seller {
     id: number;
-    name: string;
-    delivery_date: string;
-    template_number: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    dni: string | null;
     created_at: string;
     updated_at: string;
 }
 
 interface Props {
-    deliveries: {
-        data: Delivery[];
+    sellers: {
+        data: Seller[];
         links: Array<{
             url: string | null;
             label: string;
@@ -48,22 +49,22 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/gestion',
     },
     {
-        title: 'Entregas',
-        href: '/entregas/gestionar',
+        title: 'Vendedores',
+        href: '/vendedores/gestionar',
     },
 ];
 
-export default function GestionarEntregas({ deliveries, filters }: Props) {
+export default function GestionarVendedores({ sellers, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+    const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
-        delivery: Delivery | null;
+        seller: Seller | null;
         isDeleting: boolean;
     }>({
         isOpen: false,
-        delivery: null,
+        seller: null,
         isDeleting: false
     });
 
@@ -73,7 +74,7 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchQuery !== (filters?.search || '')) {
-                router.get(window.route('entregas.gestionar'),
+                router.get(window.route('vendedores.gestionar'),
                     searchQuery ? { search: searchQuery } : {},
                     {
                         preserveState: true,
@@ -87,19 +88,19 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
     }, [searchQuery, filters?.search]);
 
     const openCreateModal = () => {
-        setSelectedDelivery(null);
+        setSelectedSeller(null);
         setIsModalOpen(true);
     };
 
-    const openEditModal = (delivery: Delivery) => {
-        setSelectedDelivery(delivery);
+    const openEditModal = (seller: Seller) => {
+        setSelectedSeller(seller);
         setIsModalOpen(true);
     };
 
-    const openDeleteModal = (delivery: Delivery) => {
+    const openDeleteModal = (seller: Seller) => {
         setDeleteModal({
             isOpen: true,
-            delivery,
+            seller,
             isDeleting: false
         });
     };
@@ -108,28 +109,28 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
         if (!deleteModal.isDeleting) {
             setDeleteModal({
                 isOpen: false,
-                delivery: null,
+                seller: null,
                 isDeleting: false
             });
         }
     };
 
     const handleDelete = () => {
-        if (!deleteModal.delivery) return;
+        if (!deleteModal.seller) return;
 
         setDeleteModal(prev => ({ ...prev, isDeleting: true }));
 
-        router.delete(window.route('entregas.destroy', deleteModal.delivery.id), {
+        router.delete(window.route('vendedores.destroy', deleteModal.seller.id), {
             onSuccess: () => {
                 setDeleteModal({
                     isOpen: false,
-                    delivery: null,
+                    seller: null,
                     isDeleting: false
                 });
             },
             onError: () => {
                 setDeleteModal(prev => ({ ...prev, isDeleting: false }));
-                error('Error al eliminar', 'No se pudo eliminar la entrega. Inténtalo nuevamente.');
+                error('Error al eliminar', 'No se pudo eliminar el vendedor. Inténtalo nuevamente.');
             }
         });
     };
@@ -139,7 +140,7 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
     };
 
     const getModalTitle = () => {
-        return selectedDelivery ? 'Editar Entrega' : 'Registrar Nueva Entrega';
+        return selectedSeller ? 'Editar Vendedor' : 'Registrar Nuevo Vendedor';
     };
 
     const formatDate = (dateString: string) => {
@@ -152,23 +153,23 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Gestionar Entregas" />
+            <Head title="Gestionar Vendedores" />
 
             <div className="container mx-auto px-4 py-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <Heading
-                            title="Gestionar Entregas"
-                            description="Administra todas las entregas del sistema"
+                            title="Gestionar Vendedores"
+                            description="Administra todos los vendedores del sistema"
                         />
                     </div>
 
-                    {/* Buscador y Botón Nueva Entrega */}
+                    {/* Buscador y Botón Nuevo Vendedor */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex-1">
                             <SearchInput
-                                placeholder="Buscar por nombre o número de plantilla..."
+                                placeholder="Buscar por nombres, apellidos, teléfono o DNI..."
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 onClear={clearSearch}
@@ -176,34 +177,39 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                         </div>
                         <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
                             <Plus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nueva Entrega</span>
+                            <span className="sm:inline">Nuevo Vendedor</span>
                         </Button>
                     </div>
                 </div>
 
-                {/* Deliveries Table */}
+                {/* Sellers Table */}
                 <Card className="bg-card dark:bg-card border-border dark:border-border">
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             {/* Vista móvil: Cards */}
                             <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-                                {(deliveries?.data || []).map((delivery) => (
-                                    <div key={delivery.id} className="border border-border dark:border-border rounded-lg p-4 bg-card dark:bg-card shadow-sm">
+                                {(sellers?.data || []).map((seller) => (
+                                    <div key={seller.id} className="border border-border dark:border-border rounded-lg p-4 bg-card dark:bg-card shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-medium text-foreground dark:text-foreground truncate">
-                                                    {delivery.name}
+                                                    {`${seller.first_name} ${seller.last_name}`}
                                                 </h3>
                                                 <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                                    Fecha: {formatDate(delivery.delivery_date)}
+                                                    Teléfono: {seller.phone}
                                                 </p>
+                                                {seller.dni && (
+                                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                                        DNI: {seller.dni}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className="mb-4">
-                                            <span className="text-xs text-muted-foreground dark:text-muted-foreground">Número de Plantilla:</span>
-                                            <p className="text-sm text-foreground dark:text-foreground font-mono">
-                                                {delivery.template_number}
+                                            <span className="text-xs text-muted-foreground dark:text-muted-foreground">Registrado:</span>
+                                            <p className="text-sm text-foreground dark:text-foreground">
+                                                {formatDate(seller.created_at)}
                                             </p>
                                         </div>
 
@@ -217,21 +223,14 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-[160px]">
                                                     <DropdownMenuItem
-                                                        onClick={() => router.visit(window.route('entregas.puntos.index', delivery.id))}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <MapPin className="mr-2 h-4 w-4" />
-                                                        Ver puntos
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openEditModal(delivery)}
+                                                        onClick={() => openEditModal(seller)}
                                                         className="cursor-pointer"
                                                     >
                                                         <Edit2 className="mr-2 h-4 w-4" />
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => openDeleteModal(delivery)}
+                                                        onClick={() => openDeleteModal(seller)}
                                                         className="cursor-pointer text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -248,28 +247,38 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                             <Table className="hidden md:table">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="px-6 py-3">Nombre</TableHead>
-                                        <TableHead className="px-6 py-3">Fecha</TableHead>
-                                        <TableHead className="px-6 py-3">Número de Plantilla</TableHead>
+                                        <TableHead className="px-6 py-3">Nombre Completo</TableHead>
+                                        <TableHead className="px-6 py-3">Teléfono</TableHead>
+                                        <TableHead className="px-6 py-3">DNI</TableHead>
+                                        <TableHead className="px-6 py-3">Fecha de Registro</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {(deliveries?.data || []).map((delivery) => (
-                                        <TableRow key={delivery.id} className="hover:bg-muted/50">
+                                    {(sellers?.data || []).map((seller) => (
+                                        <TableRow key={seller.id} className="hover:bg-muted/50">
                                             <TableCell className="px-6 py-4">
                                                 <div className="font-medium">
-                                                    {delivery.name}
+                                                    {`${seller.first_name} ${seller.last_name}`}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
-                                                <span className="text-sm">
-                                                    {formatDate(delivery.delivery_date)}
+                                                <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                                                    {seller.phone}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
-                                                <span className="text-sm font-mono">
-                                                    {delivery.template_number}
+                                                <div className="text-sm">
+                                                    {seller.dni ? (
+                                                        <span className="font-mono bg-muted px-2 py-1 rounded text-foreground">{seller.dni}</span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic">Sin DNI</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <span className="text-sm text-muted-foreground">
+                                                    {formatDate(seller.created_at)}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
@@ -282,21 +291,14 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-[160px]">
                                                         <DropdownMenuItem
-                                                            onClick={() => router.visit(window.route('entregas.puntos.index', delivery.id))}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <MapPin className="mr-2 h-4 w-4" />
-                                                            Ver puntos
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openEditModal(delivery)}
+                                                            onClick={() => openEditModal(seller)}
                                                             className="cursor-pointer"
                                                         >
                                                             <Edit2 className="mr-2 h-4 w-4" />
                                                             Editar
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            onClick={() => openDeleteModal(delivery)}
+                                                            onClick={() => openDeleteModal(seller)}
                                                             className="cursor-pointer text-destructive focus:text-destructive"
                                                         >
                                                             <Trash2 className="mr-2 h-4 w-4" />
@@ -311,16 +313,16 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                             </Table>
                         </div>
 
-                        {(deliveries?.data?.length === 0 || !deliveries?.data) && (
+                        {(sellers?.data?.length === 0 || !sellers?.data) && (
                             <div className="text-center py-12">
-                                <Truck className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
+                                <User className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
                                 <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
-                                    {filters?.search ? 'No se encontraron entregas' : 'No hay entregas registradas'}
+                                    {filters?.search ? 'No se encontraron vendedores' : 'No hay vendedores registrados'}
                                 </h3>
                                 <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
                                     {filters?.search
                                         ? 'Intenta cambiar los criterios de búsqueda.'
-                                        : 'Comienza registrando tu primera entrega.'
+                                        : 'Comienza registrando tu primer vendedor.'
                                     }
                                 </p>
                                 {filters?.search && (
@@ -331,17 +333,17 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                             setSearchQuery('');
                                         }}
                                     >
-                                        Ver todas las entregas
+                                        Ver todos los vendedores
                                     </Button>
                                 )}
                             </div>
                         )}
 
                         {/* Paginación dentro del mismo card */}
-                        {(deliveries?.links && deliveries.links.length > 3) && (
+                        {(sellers?.links && sellers.links.length > 3) && (
                             <div className="border-t">
                                 <Pagination
-                                    users={deliveries}
+                                    users={sellers}
                                     noCard={true}
                                     showInfo={true}
                                 />
@@ -361,10 +363,10 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
             </Button>
 
             {/* Modales */}
-            <DeliveryModal
+            <SellerModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                delivery={selectedDelivery}
+                seller={selectedSeller}
                 title={getModalTitle()}
                 onSuccess={(message) => message && success('¡Éxito!', message)}
                 onError={(message) => error('Error', message)}
@@ -374,7 +376,7 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                 isOpen={deleteModal.isOpen}
                 onClose={closeDeleteModal}
                 onConfirm={handleDelete}
-                itemName={deleteModal.delivery?.name}
+                itemName={deleteModal.seller ? `${deleteModal.seller.first_name} ${deleteModal.seller.last_name}` : undefined}
                 isDeleting={deleteModal.isDeleting}
             />
         </AppLayout>

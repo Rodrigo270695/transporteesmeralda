@@ -5,14 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Mobility extends Model
+class Seller extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'plate',
-        'conductor_user_id',
+        'first_name',
+        'last_name',
+        'phone',
+        'dni',
     ];
 
     protected $casts = [
@@ -20,40 +21,17 @@ class Mobility extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relación con el conductor (Usuario)
-    public function conductor()
-    {
-        return $this->belongsTo(User::class, 'conductor_user_id');
-    }
+    /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = ['full_name'];
 
-    // Relación con liquidador
-    public function liquidator()
+    /**
+     * Get the seller's full name.
+     */
+    public function getFullNameAttribute(): string
     {
-        return $this->hasOne(Liquidator::class);
-    }
-
-    // Relación con SOAT
-    public function soat()
-    {
-        return $this->hasOne(Soat::class);
-    }
-
-    // Relación con revisión técnica
-    public function technicalReview()
-    {
-        return $this->hasOne(TechnicalReview::class);
-    }
-
-    // Relación con permisos
-    public function permit()
-    {
-        return $this->hasOne(Permit::class);
-    }
-
-    // Relación con extintor
-    public function fireExtinguisher()
-    {
-        return $this->hasOne(FireExtinguisher::class);
+        return "{$this->first_name} {$this->last_name}";
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -69,7 +47,7 @@ class Mobility extends Model
     }
 
     /**
-     * Puntos de entrega pendientes de esta movilidad
+     * Puntos de entrega pendientes del vendedor
      */
     public function pendingDeliveryPoints()
     {
@@ -77,27 +55,19 @@ class Mobility extends Model
     }
 
     /**
-     * Puntos de entrega completados de esta movilidad
+     * Puntos de entrega completados del vendedor
      */
     public function completedDeliveryPoints()
     {
         return $this->deliveryPoints()->completed();
     }
 
-    /**
-     * Puntos de entrega en ruta de esta movilidad
-     */
-    public function activeDeliveryPoints()
-    {
-        return $this->deliveryPoints()->byStatus('en_ruta');
-    }
-
     // ═══════════════════════════════════════════════════════════
-    // 🔧 ACCESSORS PARA MOVILIDAD
+    // 🔧 ACCESSORS PARA VENDEDORES
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * Get total delivery points assigned to this mobility
+     * Get total delivery points for this seller
      */
     public function getTotalDeliveryPointsAttribute(): int
     {
@@ -113,15 +83,7 @@ class Mobility extends Model
     }
 
     /**
-     * Get active delivery points count (en ruta)
-     */
-    public function getActiveDeliveryPointsCountAttribute(): int
-    {
-        return $this->activeDeliveryPoints()->count();
-    }
-
-    /**
-     * Get total amount to collect by this mobility
+     * Get total amount to collect by this seller
      */
     public function getTotalAmountToCollectAttribute(): float
     {
@@ -129,7 +91,7 @@ class Mobility extends Model
     }
 
     /**
-     * Get total amount collected by this mobility
+     * Get total amount collected by this seller
      */
     public function getTotalAmountCollectedAttribute(): float
     {
@@ -137,17 +99,9 @@ class Mobility extends Model
     }
 
     /**
-     * Check if mobility is currently active (has points en_ruta)
+     * Get seller's performance percentage
      */
-    public function getIsActiveAttribute(): bool
-    {
-        return $this->active_delivery_points_count > 0;
-    }
-
-    /**
-     * Get mobility efficiency percentage
-     */
-    public function getEfficiencyPercentageAttribute(): int
+    public function getPerformancePercentageAttribute(): int
     {
         if ($this->total_delivery_points === 0) {
             return 0;
@@ -155,13 +109,5 @@ class Mobility extends Model
 
         $completed = $this->completedDeliveryPoints()->count();
         return round(($completed / $this->total_delivery_points) * 100);
-    }
-
-    /**
-     * Get conductor's full name
-     */
-    public function getConductorFullNameAttribute(): string
-    {
-        return $this->conductor ? $this->conductor->full_name : 'Sin conductor';
     }
 }

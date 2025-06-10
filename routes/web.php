@@ -5,6 +5,8 @@ use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\DeliveryPointController;
+use App\Http\Controllers\SellerController;
 use App\Http\Controllers\MobilityController;
 use App\Http\Controllers\LiquidatorController;
 use App\Http\Controllers\SoatController;
@@ -113,6 +115,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('{payment_method}', [PaymentMethodController::class, 'destroy'])->name('destroy');
     });
 
+    // Rutas de Vendedores
+    Route::prefix('vendedores')->name('vendedores.')->group(function () {
+        Route::get('gestionar', [SellerController::class, 'index'])->name('gestionar');
+        Route::post('/', [SellerController::class, 'store'])->name('store');
+        Route::get('{seller}', [SellerController::class, 'show'])->name('show');
+        Route::put('{seller}', [SellerController::class, 'update'])->name('update');
+        Route::delete('{seller}', [SellerController::class, 'destroy'])->name('destroy');
+    });
+
     // Rutas de Entregas
     Route::prefix('entregas')->name('entregas.')->group(function () {
         Route::get('gestionar', [DeliveryController::class, 'index'])->name('gestionar');
@@ -120,6 +131,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('{delivery}', [DeliveryController::class, 'show'])->name('show');
         Route::put('{delivery}', [DeliveryController::class, 'update'])->name('update');
         Route::delete('{delivery}', [DeliveryController::class, 'destroy'])->name('destroy');
+
+                // Rutas de Puntos de Entrega
+        Route::prefix('{delivery}/puntos')->name('puntos.')->group(function () {
+            Route::get('/', [DeliveryPointController::class, 'index'])->name('index');
+            Route::get('mapa', [DeliveryPointController::class, 'map'])->name('map');
+            Route::get('crear', [DeliveryPointController::class, 'create'])->name('create');
+            Route::post('/', [DeliveryPointController::class, 'store'])->name('store');
+            Route::get('{deliveryPoint}', [DeliveryPointController::class, 'show'])->name('show');
+            Route::get('{deliveryPoint}/editar', [DeliveryPointController::class, 'edit'])->name('edit');
+            Route::put('{deliveryPoint}', [DeliveryPointController::class, 'update'])->name('update');
+            Route::delete('{deliveryPoint}', [DeliveryPointController::class, 'destroy'])->name('destroy');
+
+            // Rutas especiales
+                            Route::post('bulk-order', [DeliveryPointController::class, 'bulkUpdateOrder'])->name('bulk-order');
+                Route::post('update-order', [DeliveryPointController::class, 'updateOrder'])->name('update-order');
+                Route::post('{deliveryPoint}/upload-images', [DeliveryPointController::class, 'uploadImages'])->name('upload-images');
+            Route::post('optimize-route', [DeliveryPointController::class, 'optimizeRoute'])->name('optimize-route');
+        });
+
+        // Ruta especial para conductores
+        Route::get('{delivery}/conductor', [DeliveryPointController::class, 'forConductor'])->name('conductor');
     });
 
     // Rutas de Reportes

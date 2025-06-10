@@ -10,3 +10,7 @@ export { UserModal } from './user-modal';
 export { ToastContainer } from './toast-container';
 export { DeleteConfirmationModal } from './delete-confirmation-modal';
 export { GlobalToastManager } from './global-toast-manager';
+
+// Delivery Points
+export { DeliveryPointsTable } from './delivery-points-table';
+export { default as DeliveryPointModal } from './DeliveryPointModal';

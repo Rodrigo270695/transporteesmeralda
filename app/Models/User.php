@@ -81,4 +81,84 @@ class User extends Authenticatable
     {
         return $this->hasOne(Driver::class);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // 🔗 RELACIONES ENTREGA - DELIVERY POINTS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Relación con puntos de entrega (como cliente)
+     */
+    public function deliveryPoints()
+    {
+        return $this->hasMany(DeliveryPoint::class, 'client_user_id');
+    }
+
+    /**
+     * Puntos de entrega pendientes del cliente
+     */
+    public function pendingDeliveryPoints()
+    {
+        return $this->deliveryPoints()->pending();
+    }
+
+    /**
+     * Puntos de entrega completados del cliente
+     */
+    public function completedDeliveryPoints()
+    {
+        return $this->deliveryPoints()->completed();
+    }
+
+    /**
+     * Relación con movilidades (como conductor)
+     */
+    public function mobilities()
+    {
+        return $this->hasMany(Mobility::class, 'conductor_user_id');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 🔧 ACCESSORS PARA CLIENTES
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Get total delivery points for this client
+     */
+    public function getTotalDeliveryPointsAttribute(): int
+    {
+        return $this->deliveryPoints()->count();
+    }
+
+    /**
+     * Get pending delivery points count
+     */
+    public function getPendingDeliveryPointsCountAttribute(): int
+    {
+        return $this->pendingDeliveryPoints()->count();
+    }
+
+    /**
+     * Check if user is a client
+     */
+    public function getIsClientAttribute(): bool
+    {
+        return $this->hasRole('cliente');
+    }
+
+    /**
+     * Check if user is a conductor
+     */
+    public function getIsConductorAttribute(): bool
+    {
+        return $this->hasRole('conductor');
+    }
+
+    /**
+     * Check if user is an admin
+     */
+    public function getIsAdminAttribute(): bool
+    {
+        return $this->hasRole('admin');
+    }
 }

@@ -35,7 +35,7 @@ export function DeleteConfirmationModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md z-[10001]" style={{ zIndex: 10001 }}>
                 <DialogHeader>
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">

@@ -13,3 +13,9 @@ export { UserForm } from './user-form';
 export { Pagination } from './pagination';
 export { SearchInput } from './search-input';
 export { Toast } from './toast';
+
+// Delivery Points
+export { DeliveryPointCard } from './delivery-point-card';
+export { DeliveryPointTableRow } from './delivery-point-table-row';
+export { DeliveryStatsGrid } from './delivery-stats-grid';
+export { DeliveryFiltersBar } from './delivery-filters-bar';

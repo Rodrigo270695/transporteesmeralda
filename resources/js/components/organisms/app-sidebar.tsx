@@ -15,7 +15,8 @@ import {
     BarChart3,
     Package,
     UserCheck,
-    Truck
+    Truck,
+    User
 } from 'lucide-react';
 import AppLogo from '@/components/atoms/app-logo';
 
@@ -30,19 +31,24 @@ const mainNavItems: NavItem[] = [
         icon: Users,
         items: [
             {
-                title: 'Gestionar Usuarios',
+                title: 'Administradores',
                 href: '/usuarios/gestionar',
                 icon: Users,
             },
             {
-                title: 'Gestionar Clientes',
+                title: 'Clientes',
                 href: '/usuarios/gestionar-clientes',
                 icon: UserPlus,
             },
             {
-                title: 'Gestionar Conductores',
+                title: 'Conductores',
                 href: '/usuarios/gestionar-conductores',
                 icon: UserCheck,
+            },
+            {
+                title: 'Vendedores',
+                href: '/vendedores/gestionar',
+                icon: User,
             }
         ]
     },
@@ -55,16 +61,6 @@ const mainNavItems: NavItem[] = [
                 href: '/movilidad/gestionar',
                 icon: Package
             },
-            {
-                title: 'Rutas',
-                href: '/transportes/rutas',
-                icon: MapPin
-            },
-            {
-                title: 'Programar Viajes',
-                href: '/transportes/programar',
-                icon: Calendar
-            }
         ]
     },
     {
@@ -103,11 +99,6 @@ const mainNavItems: NavItem[] = [
                 icon: BarChart3
             }
         ]
-    },
-    {
-        title: 'Configuración',
-        href: '/configuracion',
-        icon: Settings,
     }
 ];
 
