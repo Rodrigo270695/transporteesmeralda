@@ -28,7 +28,7 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { DeliveryPoint } from '@/types';
+import { DeliveryPoint } from '@/types/delivery-points';
 
 interface DraggablePointsListProps {
     points: DeliveryPoint[];

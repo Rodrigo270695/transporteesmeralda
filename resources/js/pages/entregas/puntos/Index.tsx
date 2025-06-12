@@ -1,8 +1,9 @@
 import { Head } from '@inertiajs/react';
 import { Heading } from '@/components/molecules';
 import { DeliveryStatsGrid, DeliveryFiltersBar } from '@/components/molecules';
-import { DeliveryPointsTable, DeleteConfirmationModal } from '@/components/organisms';
-import DeliveryPointModal from '@/components/organisms/DeliveryPointModal';
+import { DeliveryPointsTable } from '@/components/organisms/admin';
+import { DeleteConfirmationModal } from '@/components/organisms';
+import { DeliveryPointModal } from '@/components/organisms/admin';
 import ViewDeliveryPointModal from '@/components/organisms/ViewDeliveryPointModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -930,7 +931,7 @@ export default function GestionarPuntosEntrega({
                                         // Preparar datos para envío al backend
                                         const pointsData = reorderedPoints.map(point => ({
                                             id: point.id,
-                                            router_order: point.route_order
+                                            route_order: point.route_order
                                         }));
 
                                         // Llamar al backend para persistir los cambios

@@ -14,7 +14,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { DeliveryPoint } from '@/types';
+import { DeliveryPoint } from '@/types/delivery-points';
 import DeliveryPointItem from '@/components/atoms/DeliveryPointItem';
 
 interface DeliveryPointListProps {
@@ -52,10 +52,10 @@ export default function DeliveryPointList({
 
             const newPoints = arrayMove(points, oldIndex, newIndex);
 
-            // Actualizar router_order para cada punto
+            // Actualizar route_order para cada punto
             const updatedPoints = newPoints.map((point, index) => ({
                 ...point,
-                router_order: index + 1
+                route_order: index + 1
             }));
 
             onReorder(updatedPoints);

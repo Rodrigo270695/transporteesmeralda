@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
-import { DeliveryPoint } from '@/types';
+import { DeliveryPoint } from '@/types/delivery-points';
 import DeliveryStatsSummary from '@/components/molecules/DeliveryStatsSummary';
 import DeliveryPointList from '@/components/molecules/DeliveryPointList';
 

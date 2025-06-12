@@ -892,7 +892,7 @@ class DeliveryPointController extends Controller
         $request->validate([
             'points' => 'required|array',
             'points.*.id' => 'required|integer|exists:delivery_points,id',
-            'points.*.router_order' => 'required|integer|min:1'
+            'points.*.route_order' => 'required|integer|min:1'
         ]);
 
         DB::beginTransaction();
@@ -900,7 +900,7 @@ class DeliveryPointController extends Controller
             foreach ($request->points as $pointData) {
                 DeliveryPoint::where('id', $pointData['id'])
                     ->where('delivery_id', $delivery->id)
-                    ->update(['route_order' => $pointData['router_order']]);
+                    ->update(['route_order' => $pointData['route_order']]);
             }
 
             DB::commit();

@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DeliveryPointController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\MobilityController;
 use App\Http\Controllers\LiquidatorController;
@@ -167,6 +168,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('estadisticas', function () {
             return Inertia::render('reportes/estadisticas');
         })->name('reportes.estadisticas');
+    });
+
+    // Rutas para Conductores
+    Route::prefix('conductor')->name('conductor.')->group(function () {
+        Route::get('dashboard', [DriverController::class, 'dashboard'])->name('dashboard');
+        Route::get('entrega/{delivery}', [DriverController::class, 'delivery'])->name('entrega');
+        Route::put('punto/{deliveryPoint}', [DriverController::class, 'updatePoint'])->name('actualizar-punto');
+        Route::post('imagenes', [DriverController::class, 'uploadImages'])->name('subir-imagenes');
+        Route::post('ubicacion', [DriverController::class, 'updateLocation'])->name('actualizar-ubicacion');
+        Route::get('entrega/{delivery}/siguiente-punto', [DriverController::class, 'nextPoint'])->name('siguiente-punto');
     });
 
     // Configuración

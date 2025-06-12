@@ -33,9 +33,30 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        {{-- PWA Meta Tags --}}
+        <meta name="description" content="Aplicación móvil para conductores de Transporte Esmeralda">
+        <meta name="theme-color" content="#059669">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="Esmeralda Driver">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="application-name" content="Esmeralda Driver">
+
+        {{-- Manifest --}}
+        <link rel="manifest" href="/manifest.json">
+
+        {{-- Icons --}}
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.svg">
+
+        {{-- iOS Splash Screens --}}
+        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.svg">
+
+        {{-- Microsoft --}}
+        <meta name="msapplication-TileColor" content="#059669">
+        <meta name="msapplication-config" content="/browserconfig.xml">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

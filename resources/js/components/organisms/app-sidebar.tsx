@@ -76,6 +76,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Entregas',
                 href: '/entregas/gestionar',
                 icon: Truck
+            },
+            {
+                title: 'Vista Conductor',
+                href: '/conductor/dashboard',
+                icon: MapPin
             }
         ]
     },

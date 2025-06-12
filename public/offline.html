@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sin Conexión - Transporte Esmeralda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #ecfdf5 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #374151;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: #fef3c7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .truck-icon {
+            width: 40px;
+            height: 40px;
+            fill: #d97706;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #111827;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .status {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        button {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #047857;
+        }
+
+        button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: transparent;
+            color: #059669;
+            border: 1px solid #059669;
+        }
+
+        .secondary-btn:hover {
+            background: #f0fdf4;
+        }
+
+        .features {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .features h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .feature-list {
+            list-style: none;
+            text-align: left;
+        }
+
+        .feature-list li {
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .loading {
+            display: none;
+            margin: 1rem 0;
+        }
+
+        .spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #059669;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">
+            <svg class="truck-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 7h-3V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1.05a2.5 2.5 0 0 0 4.9 0h4.1a2.5 2.5 0 0 0 4.9 0H20a1 1 0 0 0 1-1v-5a1 1 0 0 0-.293-.707L19 7zm-2 2v2h-2V9h2zm-10 7a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm10 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z"/>
+            </svg>
+        </div>
+
+        <h1>Sin Conexión a Internet</h1>
+        <p>No se puede conectar al servidor. Algunas funciones están disponibles sin conexión.</p>
+
+        <div class="status">
+            <span class="status-indicator" id="connection-indicator"></span>
+            <span id="connection-status">Sin conexión</span>
+        </div>
+
+        <div class="actions">
+            <button onclick="tryReconnect()" id="reconnect-btn">
+                Intentar Reconectar
+            </button>
+            <button class="secondary-btn" onclick="goToDashboard()">
+                Ir al Dashboard
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 0.5rem; font-size: 0.875rem;">Reconectando...</p>
+        </div>
+
+        <div class="features">
+            <h3>Funciones Disponibles Sin Conexión</h3>
+            <ul class="feature-list">
+                <li>Ver entregas cacheadas</li>
+                <li>Tomar fotos (se sincronizarán después)</li>
+                <li>Actualizar estados (se enviarán después)</li>
+                <li>Ver datos de ubicación GPS</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let isReconnecting = false;
+
+        // Verificar estado de conexión
+        function updateConnectionStatus() {
+            const indicator = document.getElementById('connection-indicator');
+            const status = document.getElementById('connection-status');
+
+            if (navigator.onLine) {
+                indicator.classList.add('connected');
+                status.textContent = 'Conectado';
+
+                // Si estaba sin conexión, intentar redirigir
+                if (!isReconnecting) {
+                    setTimeout(() => {
+                        goToDashboard();
+                    }, 1000);
+                }
+            } else {
+                indicator.classList.remove('connected');
+                status.textContent = 'Sin conexión';
+            }
+        }
+
+        // Intentar reconectar
+        function tryReconnect() {
+            if (isReconnecting) return;
+
+            isReconnecting = true;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('reconnect-btn').disabled = true;
+
+            // Simular intento de reconexión
+            setTimeout(() => {
+                if (navigator.onLine) {
+                    // Intentar hacer una petición al servidor
+                    fetch('/api/health', {
+                        method: 'GET',
+                        cache: 'no-cache'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            goToDashboard();
+                        } else {
+                            throw new Error('Server not responding');
+                        }
+                    })
+                    .catch(() => {
+                        showReconnectError();
+                    });
+                } else {
+                    showReconnectError();
+                }
+            }, 2000);
+        }
+
+        function showReconnectError() {
+            isReconnecting = false;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('reconnect-btn').disabled = false;
+
+            // Mostrar mensaje de error temporal
+            const status = document.getElementById('connection-status');
+            const originalText = status.textContent;
+            status.textContent = 'Error al reconectar';
+            status.style.color = '#ef4444';
+
+            setTimeout(() => {
+                status.textContent = originalText;
+                status.style.color = '';
+            }, 3000);
+        }
+
+        function goToDashboard() {
+            window.location.href = '/conductor/dashboard';
+        }
+
+        // Eventos de conexión
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+
+        // Verificar estado inicial
+        updateConnectionStatus();
+
+        // Auto-verificar conexión cada 30 segundos
+        setInterval(() => {
+            if (!navigator.onLine) {
+                // Intentar hacer una petición pequeña para verificar realmente la conexión
+                fetch('/favicon.ico', {
+                    method: 'HEAD',
+                    cache: 'no-cache',
+                    timeout: 5000
+                })
+                .then(() => {
+                    // Si la petición es exitosa pero navigator.onLine es false,
+                    // forzar actualización del estado
+                    if (!navigator.onLine) {
+                        updateConnectionStatus();
+                    }
+                })
+                .catch(() => {
+                    // Confirmar que realmente no hay conexión
+                });
+            }
+        }, 30000);
+
+        // Registrar Service Worker si no está registrado
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('SW registered:', registration);
+                })
+                .catch(error => {
+                    console.log('SW registration failed:', error);
+                });
+        }
+    </script>
+</body>
+</html>

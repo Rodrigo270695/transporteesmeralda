@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { DeliveryPoint } from '@/types';
+import { DeliveryPoint } from '@/types/delivery-points';
 
 interface DeliveryPointItemProps {
     point: DeliveryPoint;
@@ -85,7 +85,7 @@ export default function DeliveryPointItem({
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                            {point.router_order}
+                            {point.route_order}
                         </span>
                         <span className="font-medium truncate">{point.point_name}</span>
                     </div>
