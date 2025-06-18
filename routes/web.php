@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentMethodController;
+use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DeliveryPointController;
 use App\Http\Controllers\DriverController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\SoatController;
 use App\Http\Controllers\TechnicalReviewController;
 use App\Http\Controllers\PermitController;
 use App\Http\Controllers\FireExtinguisherController;
+use App\Http\Controllers\PropertyCardController;
 
 // Redireccionar la raíz al login
 Route::get('/', function () {
@@ -93,6 +95,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('extintor', [FireExtinguisherController::class, 'destroy'])->name('extintor.destroy');
             Route::get('extintor/view', [FireExtinguisherController::class, 'viewDocument'])->name('extintor.view');
             Route::get('extintor/download', [FireExtinguisherController::class, 'downloadDocument'])->name('extintor.download');
+
+            // Tarjeta de Propiedad
+            Route::post('tarjeta-propiedad', [PropertyCardController::class, 'store'])->name('tarjeta-propiedad.store');
+            Route::put('tarjeta-propiedad/{property_card}', [PropertyCardController::class, 'update'])->name('tarjeta-propiedad.update');
+            Route::delete('tarjeta-propiedad', [PropertyCardController::class, 'destroy'])->name('tarjeta-propiedad.destroy');
+            Route::get('tarjeta-propiedad/view', [PropertyCardController::class, 'viewDocument'])->name('tarjeta-propiedad.view');
+            Route::get('tarjeta-propiedad/download', [PropertyCardController::class, 'downloadDocument'])->name('tarjeta-propiedad.download');
         });
     });
 
@@ -116,6 +125,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('{payment_method}', [PaymentMethodController::class, 'destroy'])->name('destroy');
     });
 
+    // Rutas de Zonas
+    Route::prefix('zonas')->name('zonas.')->group(function () {
+        Route::get('gestionar', [ZoneController::class, 'index'])->name('gestionar');
+        Route::post('/', [ZoneController::class, 'store'])->name('store');
+        Route::get('{zone}', [ZoneController::class, 'show'])->name('show');
+        Route::put('{zone}', [ZoneController::class, 'update'])->name('update');
+        Route::delete('{zone}', [ZoneController::class, 'destroy'])->name('destroy');
+    });
+
     // Rutas de Vendedores
     Route::prefix('vendedores')->name('vendedores.')->group(function () {
         Route::get('gestionar', [SellerController::class, 'index'])->name('gestionar');
@@ -129,6 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('entregas')->name('entregas.')->group(function () {
         Route::get('gestionar', [DeliveryController::class, 'index'])->name('gestionar');
         Route::post('/', [DeliveryController::class, 'store'])->name('store');
+        Route::post('{delivery}/duplicar', [DeliveryController::class, 'duplicate'])->name('duplicate');
         Route::get('{delivery}', [DeliveryController::class, 'show'])->name('show');
         Route::put('{delivery}', [DeliveryController::class, 'update'])->name('update');
         Route::delete('{delivery}', [DeliveryController::class, 'destroy'])->name('destroy');

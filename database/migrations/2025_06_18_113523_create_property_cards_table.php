@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('deliveries', function (Blueprint $table) {
+        Schema::create('property_cards', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100);
-            $table->date('delivery_date');
-            $table->string('template_number', 15);
-            $table->foreignId('zone_id')->constrained('zones')->onDelete('restrict');
+            $table->foreignId('mobility_id')->constrained('mobilities')->onDelete('restrict');
+            $table->string('digital_document')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('deliveries');
+        Schema::dropIfExists('property_cards');
     }
 };

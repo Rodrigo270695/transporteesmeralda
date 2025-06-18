@@ -23,15 +23,30 @@ class UpdateDeliveryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => [
-                'required',
-                'string',
-                'max:100',
-                Rule::unique('deliveries', 'name')->ignore($this->route('delivery'))
-            ],
+            'name' => ['required', 'string', 'max:100'],
             'delivery_date' => ['required', 'date'],
             'template_number' => ['required', 'string', 'max:15'],
+            'zone_id' => ['required', 'exists:zones,id'],
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // Validar que la combinación nombre + fecha sea única, ignorando el registro actual
+            $delivery = $this->route('delivery');
+            $exists = \App\Models\Delivery::where('name', $this->name)
+                                        ->where('delivery_date', $this->delivery_date)
+                                        ->where('id', '!=', $delivery->id)
+                                        ->exists();
+
+            if ($exists) {
+                $validator->errors()->add('name', 'Ya existe una entrega con este nombre para la fecha seleccionada.');
+            }
+        });
     }
 
     /**
@@ -43,12 +58,14 @@ class UpdateDeliveryRequest extends FormRequest
             'name.required' => 'El nombre es obligatorio.',
             'name.string' => 'El nombre debe ser texto válido.',
             'name.max' => 'El nombre no puede exceder 100 caracteres.',
-            'name.unique' => 'Ya existe una entrega con este nombre.',
+
             'delivery_date.required' => 'La fecha es obligatoria.',
             'delivery_date.date' => 'Debe ser una fecha válida.',
             'template_number.required' => 'El número de plantilla es obligatorio.',
             'template_number.string' => 'El número de plantilla debe ser texto válido.',
             'template_number.max' => 'El número de plantilla no puede exceder 15 caracteres.',
+            'zone_id.required' => 'La zona es obligatoria.',
+            'zone_id.exists' => 'La zona seleccionada no es válida.',
         ];
     }
 }

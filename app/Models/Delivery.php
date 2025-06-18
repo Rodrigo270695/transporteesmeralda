@@ -13,6 +13,7 @@ class Delivery extends Model
         'name',
         'delivery_date',
         'template_number',
+        'zone_id',
     ];
 
     protected $casts = [
@@ -24,6 +25,14 @@ class Delivery extends Model
     // ═══════════════════════════════════════════════════════════
     // 🔗 RELACIONES
     // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Relación con zona
+     */
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
 
     /**
      * Relación con puntos de entrega

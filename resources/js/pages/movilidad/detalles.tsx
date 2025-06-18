@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { DocumentModal, LiquidatorModal, DeleteConfirmationModal } from '@/components/modals/movilidad';
+import { PropertyCardModal } from '@/components/modals/movilidad/PropertyCardModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import {
     Wrench,
     ClipboardList,
     Flame,
+    CreditCard,
     Plus,
     Edit,
     Trash,
@@ -50,6 +52,13 @@ interface DocumentWithDates {
     updated_at: string;
 }
 
+interface PropertyCard {
+    id: number;
+    digital_document?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 interface Mobility {
     id: number;
     name: string;
@@ -61,6 +70,7 @@ interface Mobility {
     technical_review?: DocumentWithDates;
     permit?: DocumentWithDates;
     fire_extinguisher?: DocumentWithDates;
+    property_card?: PropertyCard;
     created_at: string;
     updated_at: string;
 }
@@ -274,6 +284,19 @@ export default function DetallesMovilidad({ mobility }: Props) {
                 ? `Vigente hasta ${formatDate(mobility.fire_extinguisher.end_date)}`
                 : 'No registrado',
             status: getDocumentStatusBadge(mobility.fire_extinguisher)
+        },
+        {
+            title: 'Tarjeta de Propiedad',
+            type: 'tarjeta-propiedad',
+            icon: CreditCard,
+            data: mobility.property_card,
+            hasDateRange: false,
+            description: mobility.property_card
+                ? 'Documento cargado'
+                : 'No registrado',
+            status: mobility.property_card
+                ? <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Registrado</Badge>
+                : <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Sin registrar</Badge>
         }
     ];
 
@@ -484,6 +507,15 @@ export default function DetallesMovilidad({ mobility }: Props) {
                 title="Gestionar Extintor"
                 description="Registra o actualiza la información del extintor del vehículo."
                 fieldLabel="Documento Digital"
+            />
+
+            <PropertyCardModal
+                isOpen={activeModal === 'tarjeta-propiedad'}
+                onClose={() => { setActiveModal(null); setSelectedDocument(null); }}
+                mobilityId={mobility.id}
+                propertyCardData={activeModal === 'tarjeta-propiedad' ? selectedDocument || mobility.property_card : null}
+                title="Gestionar Tarjeta de Propiedad"
+                description="Registra o actualiza la tarjeta de propiedad del vehículo."
             />
 
             {/* Modal de confirmación de eliminación */}

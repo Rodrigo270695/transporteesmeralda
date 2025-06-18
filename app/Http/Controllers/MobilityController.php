@@ -14,7 +14,7 @@ class MobilityController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Mobility::with(['conductor', 'liquidator', 'soat', 'technicalReview', 'permit', 'fireExtinguisher']);
+        $query = Mobility::with(['conductor', 'liquidator', 'soat', 'technicalReview', 'permit', 'fireExtinguisher', 'propertyCard']);
 
         // Aplicar filtro de búsqueda si existe
         if ($request->has('search') && !empty($request->search)) {
@@ -89,7 +89,8 @@ class MobilityController extends Controller
             'soat',
             'technicalReview',
             'permit',
-            'fireExtinguisher'
+            'fireExtinguisher',
+            'propertyCard'
         ]);
 
         return Inertia::render('movilidad/detalles', [

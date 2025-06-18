@@ -9,15 +9,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, Search, Truck, MapPin } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, Trash2, Truck, MapPin, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
+
+interface Zone {
+    id: number;
+    name: string;
+    description: string | null;
+}
 
 interface Delivery {
     id: number;
     name: string;
     delivery_date: string;
     template_number: string;
+    zone_id: number;
+    zone?: Zone;
     created_at: string;
     updated_at: string;
 }
@@ -37,6 +45,7 @@ interface Props {
         from: number;
         to: number;
     };
+    zones: Zone[];
     filters?: {
         search?: string;
     };
@@ -53,9 +62,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarEntregas({ deliveries, filters }: Props) {
+export default function GestionarEntregas({ deliveries, zones, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+    const [isDuplicating, setIsDuplicating] = useState(false);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
@@ -88,11 +98,19 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
 
     const openCreateModal = () => {
         setSelectedDelivery(null);
+        setIsDuplicating(false);
         setIsModalOpen(true);
     };
 
     const openEditModal = (delivery: Delivery) => {
         setSelectedDelivery(delivery);
+        setIsDuplicating(false);
+        setIsModalOpen(true);
+    };
+
+    const openDuplicateModal = (delivery: Delivery) => {
+        setSelectedDelivery(delivery);
+        setIsDuplicating(true);
         setIsModalOpen(true);
     };
 
@@ -139,6 +157,7 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
     };
 
     const getModalTitle = () => {
+        if (isDuplicating) return 'Duplicar Entrega';
         return selectedDelivery ? 'Editar Entrega' : 'Registrar Nueva Entrega';
     };
 
@@ -200,11 +219,19 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                             </div>
                                         </div>
 
-                                        <div className="mb-4">
-                                            <span className="text-xs text-muted-foreground dark:text-muted-foreground">Número de Plantilla:</span>
-                                            <p className="text-sm text-foreground dark:text-foreground font-mono">
-                                                {delivery.template_number}
-                                            </p>
+                                        <div className="mb-4 space-y-2">
+                                            <div>
+                                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">Número de Plantilla:</span>
+                                                <p className="text-sm text-foreground dark:text-foreground font-mono">
+                                                    {delivery.template_number}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">Zona:</span>
+                                                <p className="text-sm text-foreground dark:text-foreground">
+                                                    {delivery.zone?.name || 'Sin zona'}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div className="flex justify-end">
@@ -231,6 +258,13 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
+                                                        onClick={() => openDuplicateModal(delivery)}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Copy className="mr-2 h-4 w-4" />
+                                                        Duplicar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
                                                         onClick={() => openDeleteModal(delivery)}
                                                         className="cursor-pointer text-destructive focus:text-destructive"
                                                     >
@@ -251,6 +285,7 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                         <TableHead className="px-6 py-3">Nombre</TableHead>
                                         <TableHead className="px-6 py-3">Fecha</TableHead>
                                         <TableHead className="px-6 py-3">Número de Plantilla</TableHead>
+                                        <TableHead className="px-6 py-3">Zona</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -270,6 +305,13 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                             <TableCell className="px-6 py-4">
                                                 <span className="text-sm font-mono">
                                                     {delivery.template_number}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <span className="text-sm">
+                                                    {delivery.zone?.name || (
+                                                        <span className="text-muted-foreground italic">Sin zona</span>
+                                                    )}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
@@ -294,6 +336,13 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
                                                         >
                                                             <Edit2 className="mr-2 h-4 w-4" />
                                                             Editar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => openDuplicateModal(delivery)}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <Copy className="mr-2 h-4 w-4" />
+                                                            Duplicar
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => openDeleteModal(delivery)}
@@ -363,9 +412,14 @@ export default function GestionarEntregas({ deliveries, filters }: Props) {
             {/* Modales */}
             <DeliveryModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setIsDuplicating(false);
+                }}
                 delivery={selectedDelivery}
+                zones={zones}
                 title={getModalTitle()}
+                isDuplicating={isDuplicating}
                 onSuccess={(message) => message && success('¡Éxito!', message)}
                 onError={(message) => error('Error', message)}
             />

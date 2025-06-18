@@ -56,6 +56,12 @@ class Mobility extends Model
         return $this->hasOne(FireExtinguisher::class);
     }
 
+    // Relación con tarjeta de propiedad
+    public function propertyCard()
+    {
+        return $this->hasOne(PropertyCard::class);
+    }
+
     // ═══════════════════════════════════════════════════════════
     // 🔗 RELACIONES ENTREGA - DELIVERY POINTS
     // ═══════════════════════════════════════════════════════════

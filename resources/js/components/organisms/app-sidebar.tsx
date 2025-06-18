@@ -73,6 +73,11 @@ const mainNavItems: NavItem[] = [
                 icon: DollarSign
             },
             {
+                title: 'Zonas',
+                href: '/zonas/gestionar',
+                icon: MapPin
+            },
+            {
                 title: 'Entregas',
                 href: '/entregas/gestionar',
                 icon: Truck

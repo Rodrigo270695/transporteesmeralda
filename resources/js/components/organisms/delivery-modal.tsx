@@ -2,15 +2,24 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/molecules/input-error';
 import { useForm } from '@inertiajs/react';
 import { FormEventHandler, useEffect } from 'react';
+
+interface Zone {
+    id: number;
+    name: string;
+    description: string | null;
+}
 
 interface Delivery {
     id: number;
     name: string;
     delivery_date: string;
     template_number: string;
+    zone_id: number;
+    zone?: Zone;
     created_at: string;
     updated_at: string;
 }
@@ -19,7 +28,9 @@ interface DeliveryModalProps {
     isOpen: boolean;
     onClose: () => void;
     delivery?: Delivery | null;
+    zones: Zone[];
     title: string;
+    isDuplicating?: boolean;
     onSuccess: (message: string) => void;
     onError: (message: string) => void;
 }
@@ -28,16 +39,19 @@ export function DeliveryModal({
     isOpen,
     onClose,
     delivery,
+    zones,
     title,
+    isDuplicating = false,
     onSuccess,
     onError
 }: DeliveryModalProps) {
-    const isEditing = !!delivery;
+    const isEditing = !!delivery && !isDuplicating;
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         name: '',
         delivery_date: '',
         template_number: '',
+        zone_id: '',
     });
 
     useEffect(() => {
@@ -48,23 +62,32 @@ export function DeliveryModal({
 
                 setData({
                     name: delivery.name,
-                    delivery_date: formattedDate,
+                    delivery_date: isDuplicating ? '' : formattedDate, // Si es duplicar, limpiar la fecha
                     template_number: delivery.template_number,
+                    zone_id: delivery.zone_id.toString(),
                 });
             } else {
                 reset();
             }
             clearErrors();
         }
-    }, [isOpen, delivery]);
+    }, [isOpen, delivery, isDuplicating]);
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        const submitFunction = isEditing ? put : post;
-        const routeUrl = isEditing
-            ? window.route('entregas.update', delivery.id)
-            : window.route('entregas.store');
+        let submitFunction, routeUrl;
+
+        if (isDuplicating) {
+            submitFunction = post;
+            routeUrl = window.route('entregas.duplicate', delivery.id);
+        } else if (isEditing) {
+            submitFunction = put;
+            routeUrl = window.route('entregas.update', delivery.id);
+        } else {
+            submitFunction = post;
+            routeUrl = window.route('entregas.store');
+        }
 
         submitFunction(routeUrl, {
             onSuccess: () => {
@@ -93,8 +116,8 @@ export function DeliveryModal({
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                        Complete la información para {isEditing ? 'actualizar' : 'registrar'} la entrega.
-                        Todos los campos son obligatorios.
+                        Complete la información para {isDuplicating ? 'duplicar' : isEditing ? 'actualizar' : 'registrar'} la entrega.
+                        {isDuplicating ? 'Modifique la fecha para crear una copia de la entrega con todos sus puntos.' : 'Todos los campos son obligatorios.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -157,6 +180,35 @@ export function DeliveryModal({
                         <InputError message={errors.template_number} />
                     </div>
 
+                    {/* Zona */}
+                    <div className="space-y-2">
+                        <Label htmlFor="zone_id">
+                            Zona <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                            value={data.zone_id}
+                            onValueChange={(value) => setData('zone_id', value)}
+                            disabled={processing}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecciona una zona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {zones.map((zone) => (
+                                    <SelectItem key={zone.id} value={zone.id.toString()}>
+                                        {zone.name}
+                                        {zone.description && (
+                                            <span className="text-muted-foreground ml-2">
+                                                - {zone.description}
+                                            </span>
+                                        )}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.zone_id} />
+                    </div>
+
                     {/* Botones */}
                     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                         <Button
@@ -173,7 +225,7 @@ export function DeliveryModal({
                             disabled={processing}
                             className="cursor-pointer"
                         >
-                            {processing ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Registrar')}
+                            {processing ? 'Guardando...' : (isDuplicating ? 'Duplicar' : isEditing ? 'Actualizar' : 'Registrar')}
                         </Button>
                     </div>
                 </form>

@@ -355,7 +355,7 @@ export default function DeliveryPointModal({
                                                         </SelectItem>
                                                     ))
                                                 ) : (
-                                                    <SelectItem value="" disabled>
+                                                    <SelectItem value="no-clients" disabled>
                                                         No hay clientes disponibles
                                                     </SelectItem>
                                                 )}
@@ -397,7 +397,7 @@ export default function DeliveryPointModal({
                                                         </SelectItem>
                                                     ))
                                                 ) : (
-                                                    <SelectItem value="" disabled>
+                                                    <SelectItem value="no-sellers" disabled>
                                                         No hay vendedores disponibles
                                                     </SelectItem>
                                                 )}
@@ -511,7 +511,7 @@ export default function DeliveryPointModal({
                                                         </SelectItem>
                                                     ))
                                                 ) : (
-                                                    <SelectItem value="" disabled>
+                                                    <SelectItem value="no-mobilities" disabled>
                                                         No hay vehículos disponibles
                                                     </SelectItem>
                                                 )}

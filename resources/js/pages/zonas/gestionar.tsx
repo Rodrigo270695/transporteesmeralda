@@ -1,45 +1,29 @@
 import { Head } from '@inertiajs/react';
 import { Heading, SearchInput, Pagination } from '@/components/molecules';
-import { MobilityModal } from '@/components/modals/movilidad';
+import { ZoneModal } from '@/components/organisms/zone-modal';
 import { DeleteConfirmationModal } from '@/components/organisms/delete-confirmation-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, Eye, Car } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, Trash2, Search, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
-interface User {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-}
-
-interface Mobility {
+interface Zone {
     id: number;
     name: string;
-    plate: string;
-    conductor_user_id: number;
-    conductor: User;
-    liquidator?: any;
-    soat?: any;
-    technical_review?: any;
-    permit?: any;
-    fire_extinguisher?: any;
-    property_card?: any;
+    description: string | null;
     created_at: string;
     updated_at: string;
 }
 
 interface Props {
-    mobilities: {
-        data: Mobility[];
+    zones: {
+        data: Zone[];
         links: Array<{
             url: string | null;
             label: string;
@@ -55,41 +39,40 @@ interface Props {
     filters?: {
         search?: string;
     };
-    conductors: User[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Transportes',
-        href: '/transportes',
+        title: 'Gestión',
+        href: '/gestion',
     },
     {
-        title: 'Movilidad',
-        href: '/movilidad/gestionar',
+        title: 'Zonas',
+        href: '/zonas/gestionar',
     },
 ];
 
-export default function GestionarMovilidad({ mobilities, filters, conductors }: Props) {
+export default function GestionarZonas({ zones, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedMobility, setSelectedMobility] = useState<Mobility | null>(null);
+    const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
-        mobility: Mobility | null;
+        zone: Zone | null;
         isDeleting: boolean;
     }>({
         isOpen: false,
-        mobility: null,
+        zone: null,
         isDeleting: false
     });
 
     const { success, error } = useGlobalToast();
 
-        // Debounce para búsqueda automática
+    // Debounce para búsqueda automática
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchQuery !== (filters?.search || '')) {
-                router.get(window.route('movilidad.gestionar'),
+                router.get(window.route('zonas.gestionar'),
                     searchQuery ? { search: searchQuery } : {},
                     {
                         preserveState: true,
@@ -103,19 +86,19 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
     }, [searchQuery, filters?.search]);
 
     const openCreateModal = () => {
-        setSelectedMobility(null);
+        setSelectedZone(null);
         setIsModalOpen(true);
     };
 
-    const openEditModal = (mobility: Mobility) => {
-        setSelectedMobility(mobility);
+    const openEditModal = (zone: Zone) => {
+        setSelectedZone(zone);
         setIsModalOpen(true);
     };
 
-    const openDeleteModal = (mobility: Mobility) => {
+    const openDeleteModal = (zone: Zone) => {
         setDeleteModal({
             isOpen: true,
-            mobility,
+            zone,
             isDeleting: false
         });
     };
@@ -124,28 +107,28 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
         if (!deleteModal.isDeleting) {
             setDeleteModal({
                 isOpen: false,
-                mobility: null,
+                zone: null,
                 isDeleting: false
             });
         }
     };
 
     const handleDelete = () => {
-        if (!deleteModal.mobility) return;
+        if (!deleteModal.zone) return;
 
         setDeleteModal(prev => ({ ...prev, isDeleting: true }));
 
-        router.delete(window.route('movilidad.destroy', deleteModal.mobility.id), {
+        router.delete(window.route('zonas.destroy', deleteModal.zone.id), {
             onSuccess: () => {
                 setDeleteModal({
                     isOpen: false,
-                    mobility: null,
+                    zone: null,
                     isDeleting: false
                 });
             },
             onError: () => {
                 setDeleteModal(prev => ({ ...prev, isDeleting: false }));
-                error('Error al eliminar', 'No se pudo eliminar la movilidad. Inténtalo nuevamente.');
+                error('Error al eliminar', 'No se pudo eliminar la zona. Inténtalo nuevamente.');
             }
         });
     };
@@ -155,7 +138,7 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
     };
 
     const getModalTitle = () => {
-        return selectedMobility ? 'Editar Movilidad' : 'Registrar Nueva Movilidad';
+        return selectedZone ? 'Editar Zona' : 'Registrar Nueva Zona';
     };
 
     const formatDate = (dateString: string) => {
@@ -166,47 +149,25 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
         });
     };
 
-        const getDocumentStatusBadge = (mobility: Mobility) => {
-        const documents = [
-            mobility.liquidator,
-            mobility.soat,
-            mobility.technical_review,
-            mobility.permit,
-            mobility.fire_extinguisher,
-            mobility.property_card,
-        ];
-
-        const completedDocs = documents.filter(doc => doc !== null && doc !== undefined).length;
-        const totalDocs = documents.length;
-
-        if (completedDocs === totalDocs) {
-            return <Badge variant="default" className="bg-green-100 text-green-800">Completo</Badge>;
-        } else if (completedDocs > 0) {
-            return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Incompleto ({completedDocs}/{totalDocs})</Badge>;
-        } else {
-            return <Badge variant="destructive" className="bg-red-100 text-red-800">Sin documentos</Badge>;
-        }
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Gestionar Movilidad" />
+            <Head title="Gestionar Zonas" />
 
             <div className="container mx-auto px-4 py-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <Heading
-                            title="Gestionar Movilidad"
-                            description="Administra todos los vehículos y su documentación"
+                            title="Gestionar Zonas"
+                            description="Administra todas las zonas del sistema"
                         />
                     </div>
 
-                    {/* Buscador y Botón Nueva Movilidad */}
+                    {/* Buscador y Botón Nueva Zona */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex-1">
                             <SearchInput
-                                placeholder="Buscar por nombre, placa o conductor..."
+                                placeholder="Buscar por nombre o descripción..."
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 onClear={clearSearch}
@@ -214,39 +175,38 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                         </div>
                         <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
                             <Plus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nueva Movilidad</span>
+                            <span className="sm:inline">Nueva Zona</span>
                         </Button>
                     </div>
                 </div>
 
-                {/* Mobilities Table */}
+                {/* Zones Table */}
                 <Card className="bg-card dark:bg-card border-border dark:border-border">
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             {/* Vista móvil: Cards */}
                             <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-                                {(mobilities?.data || []).map((mobility) => (
-                                    <div key={mobility.id} className="border border-border dark:border-border rounded-lg p-4 bg-card dark:bg-card shadow-sm">
+                                {(zones?.data || []).map((zone) => (
+                                    <div key={zone.id} className="border border-border dark:border-border rounded-lg p-4 bg-card dark:bg-card shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-medium text-foreground dark:text-foreground truncate">
-                                                    {mobility.name}
+                                                    {zone.name}
                                                 </h3>
                                                 <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                                    Placa: {mobility.plate} | Creado: {formatDate(mobility.created_at)}
+                                                    Creado: {formatDate(zone.created_at)}
                                                 </p>
-                                            </div>
-                                            <div className="ml-2">
-                                                {getDocumentStatusBadge(mobility)}
                                             </div>
                                         </div>
 
-                                        <div className="mb-4">
-                                            <span className="text-xs text-muted-foreground dark:text-muted-foreground">Conductor:</span>
-                                            <p className="text-sm text-foreground dark:text-foreground mt-1">
-                                                {mobility.conductor.first_name} {mobility.conductor.last_name}
-                                            </p>
-                                        </div>
+                                        {zone.description && (
+                                            <div className="mb-4">
+                                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">Descripción:</span>
+                                                <p className="text-sm text-foreground dark:text-foreground mt-1">
+                                                    {zone.description}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         <div className="flex justify-end">
                                             <DropdownMenu>
@@ -258,21 +218,14 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-[160px]">
                                                     <DropdownMenuItem
-                                                        onClick={() => router.visit(window.route('movilidad.detalles', mobility.id))}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        Ver detalles
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openEditModal(mobility)}
+                                                        onClick={() => openEditModal(zone)}
                                                         className="cursor-pointer"
                                                     >
                                                         <Edit2 className="mr-2 h-4 w-4" />
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => openDeleteModal(mobility)}
+                                                        onClick={() => openDeleteModal(zone)}
                                                         className="cursor-pointer text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -289,38 +242,32 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                             <Table className="hidden md:table">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="px-6 py-3">Vehículo</TableHead>
-                                        <TableHead className="px-6 py-3">Placa</TableHead>
-                                        <TableHead className="px-6 py-3">Conductor</TableHead>
-                                        <TableHead className="px-6 py-3">Estado Documentos</TableHead>
-                                        <TableHead className="px-6 py-3">Fecha de Registro</TableHead>
+                                        <TableHead className="px-6 py-3">Nombre</TableHead>
+                                        <TableHead className="px-6 py-3">Descripción</TableHead>
+                                        <TableHead className="px-6 py-3">Fecha de Creación</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {(mobilities?.data || []).map((mobility) => (
-                                        <TableRow key={mobility.id} className="hover:bg-muted/50">
+                                    {(zones?.data || []).map((zone) => (
+                                        <TableRow key={zone.id} className="hover:bg-muted/50">
                                             <TableCell className="px-6 py-4">
                                                 <div className="font-medium">
-                                                    {mobility.name}
+                                                    {zone.name}
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="px-6 py-4">
-                                                <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                                                    {mobility.plate}
-                                                </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
                                                 <div className="text-sm">
-                                                    {mobility.conductor.first_name} {mobility.conductor.last_name}
+                                                    {zone.description ? (
+                                                        <span className="text-foreground">{zone.description}</span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic">Sin descripción</span>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
-                                                {getDocumentStatusBadge(mobility)}
-                                            </TableCell>
-                                            <TableCell className="px-6 py-4">
                                                 <span className="text-sm text-muted-foreground">
-                                                    {formatDate(mobility.created_at)}
+                                                    {formatDate(zone.created_at)}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
@@ -333,21 +280,14 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-[160px]">
                                                         <DropdownMenuItem
-                                                            onClick={() => router.visit(window.route('movilidad.detalles', mobility.id))}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            Ver detalles
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openEditModal(mobility)}
+                                                            onClick={() => openEditModal(zone)}
                                                             className="cursor-pointer"
                                                         >
                                                             <Edit2 className="mr-2 h-4 w-4" />
                                                             Editar
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            onClick={() => openDeleteModal(mobility)}
+                                                            onClick={() => openDeleteModal(zone)}
                                                             className="cursor-pointer text-destructive focus:text-destructive"
                                                         >
                                                             <Trash2 className="mr-2 h-4 w-4" />
@@ -362,16 +302,16 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                             </Table>
                         </div>
 
-                        {(mobilities?.data?.length === 0 || !mobilities?.data) && (
+                        {(zones?.data?.length === 0 || !zones?.data) && (
                             <div className="text-center py-12">
-                                <Car className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
+                                <MapPin className="mx-auto h-12 w-12 text-muted-foreground dark:text-muted-foreground" />
                                 <h3 className="mt-4 text-lg font-semibold text-foreground dark:text-foreground">
-                                    {filters?.search ? 'No se encontraron movilidades' : 'No hay movilidades registradas'}
+                                    {filters?.search ? 'No se encontraron zonas' : 'No hay zonas registradas'}
                                 </h3>
                                 <p className="mt-2 text-sm text-muted-foreground dark:text-muted-foreground">
                                     {filters?.search
                                         ? 'Intenta cambiar los criterios de búsqueda.'
-                                        : 'Comienza registrando tu primera movilidad.'
+                                        : 'Comienza registrando tu primera zona.'
                                     }
                                 </p>
                                 {filters?.search && (
@@ -382,17 +322,17 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                                             setSearchQuery('');
                                         }}
                                     >
-                                        Ver todas las movilidades
+                                        Ver todas las zonas
                                     </Button>
                                 )}
                             </div>
                         )}
 
                         {/* Paginación dentro del mismo card */}
-                        {(mobilities?.links && mobilities.links.length > 3) && (
+                        {(zones?.links && zones.links.length > 3) && (
                             <div className="border-t">
                                 <Pagination
-                                    users={mobilities}
+                                    users={zones}
                                     noCard={true}
                                     showInfo={true}
                                 />
@@ -412,19 +352,20 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
             </Button>
 
             {/* Modales */}
-            <MobilityModal
+            <ZoneModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                mobility={selectedMobility}
-                conductors={conductors}
+                zone={selectedZone}
                 title={getModalTitle()}
+                onSuccess={(message) => message && success('¡Éxito!', message)}
+                onError={(message) => error('Error', message)}
             />
 
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}
                 onClose={closeDeleteModal}
                 onConfirm={handleDelete}
-                itemName={deleteModal.mobility?.name}
+                itemName={deleteModal.zone?.name}
                 isDeleting={deleteModal.isDeleting}
             />
         </AppLayout>
