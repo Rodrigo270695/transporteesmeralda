@@ -8,7 +8,6 @@ use App\Models\Delivery;
 use App\Models\Zone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class DeliveryController extends Controller
@@ -135,15 +134,6 @@ class DeliveryController extends Controller
             // Duplicar todos los puntos de entrega
             $originalPoints = $delivery->deliveryPoints()->get();
 
-            // Debug: Log para verificar cuántos puntos se encontraron
-            Log::info('Duplicando entrega', [
-                'original_delivery_id' => $delivery->id,
-                'new_delivery_id' => $newDelivery->id,
-                'original_points_count' => $originalPoints->count(),
-                'original_points' => $originalPoints->toArray()
-            ]);
-
-            $duplicatedCount = 0;
             foreach ($originalPoints as $originalPoint) {
                 $pointData = $originalPoint->toArray();
 
@@ -171,42 +161,20 @@ class DeliveryController extends Controller
                 // Asignar la nueva entrega
                 $pointData['delivery_id'] = $newDelivery->id;
 
-                // Debug: Log del punto que se va a crear
-                Log::info('Creando punto duplicado', [
-                    'point_data' => $pointData
-                ]);
-
                 // Crear el punto duplicado
-                $createdPoint = $newDelivery->deliveryPoints()->create($pointData);
-                $duplicatedCount++;
-
-                // Debug: Log del punto creado
-                Log::info('Punto creado', [
-                    'created_point_id' => $createdPoint->id,
-                    'point_name' => $createdPoint->point_name
-                ]);
+                $newDelivery->deliveryPoints()->create($pointData);
             }
 
             DB::commit();
 
-            // Debug: Log final
-            Log::info('Duplicación completada', [
-                'duplicated_count' => $duplicatedCount,
-                'final_points_count' => $newDelivery->deliveryPoints()->count()
-            ]);
-
             return redirect()
                 ->route('entregas.gestionar')
-                ->with('success', "Entrega '{$newDelivery->name}' duplicada exitosamente con " . $duplicatedCount . " puntos de entrega.");
+                ->with('success', "Entrega '{$newDelivery->name}' duplicada exitosamente con " . $originalPoints->count() . " puntos de entrega.");
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error duplicando entrega', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             return back()
-                ->with('error', 'No se pudo duplicar la entrega: ' . $e->getMessage());
+                ->with('error', 'No se pudo duplicar la entrega. Inténtalo nuevamente.');
         }
     }
 }
