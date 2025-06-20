@@ -43,8 +43,8 @@ class DriverController extends Controller
             ]);
         }
 
-        // Filtro de fecha (por defecto hoy)
-        $filterDate = $request->get('date', today()->toDateString());
+        // Filtro de fecha (por defecto hoy en zona horaria de Lima)
+        $filterDate = $request->get('date', now('America/Lima')->toDateString());
 
         // Obtener entregas donde el conductor tiene puntos asignados
         $deliveries = Delivery::whereHas('deliveryPoints', function($query) use ($mobilities) {
@@ -54,14 +54,14 @@ class DriverController extends Controller
             ->with([
                 'deliveryPoints' => function($query) use ($mobilities) {
                     $query->whereIn('mobility_id', $mobilities->pluck('id'))
-                          ->with(['client', 'mobility'])
+                          ->with(['client', 'seller', 'mobility'])
                           ->orderBy('route_order');
                 }
             ])
             ->orderBy('delivery_date', 'desc')
             ->paginate(10);
 
-        // Agregar estadísticas y status a cada entrega
+        // Agregar estadísticas, puntos formateados y status a cada entrega
         $deliveries->getCollection()->transform(function ($delivery) {
             $points = $delivery->deliveryPoints;
 
@@ -82,6 +82,25 @@ class DriverController extends Controller
                     ? round(($completedPoints / $totalPoints) * 100, 1)
                     : 0
             ];
+
+            // Formatear puntos para el mapa del conductor
+            $delivery->points = $points->map(function($point) {
+                return [
+                    'id' => $point->id,
+                    'route_order' => (int) ($point->route_order ?? 0),
+                    'customer_name' => $point->client ? $point->client->first_name . ' ' . $point->client->last_name : 'Cliente',
+                    'address' => $point->address,
+                    'latitude' => (float) ($point->latitude ?? 0),
+                    'longitude' => (float) ($point->longitude ?? 0),
+                    'status' => $point->status,
+                    'amount_to_collect' => (float) ($point->amount_to_collect ?? 0),
+                    'estimated_delivery_time' => $point->estimated_delivery_time,
+                    'coordinates' => [
+                        'latitude' => (float) ($point->latitude ?? 0),
+                        'longitude' => (float) ($point->longitude ?? 0),
+                    ]
+                ];
+            });
 
             // Calcular status de la entrega basado en los puntos
             if ($totalPoints == 0) {

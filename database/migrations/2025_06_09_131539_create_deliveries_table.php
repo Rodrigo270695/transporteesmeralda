@@ -17,7 +17,11 @@ return new class extends Migration
             $table->date('delivery_date');
             $table->string('template_number', 15);
             $table->foreignId('zone_id')->constrained('zones')->onDelete('restrict');
+            $table->enum('status', ['programada', 'en_progreso', 'completada', 'cancelada'])->default('programada');
             $table->timestamps();
+
+            // Índices para optimización
+            $table->index(['status', 'delivery_date'], 'idx_status_date');
         });
     }
 

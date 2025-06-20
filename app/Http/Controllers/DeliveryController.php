@@ -35,12 +35,26 @@ class DeliveryController extends Controller
                            ->paginate(10)
                            ->withQueryString();
 
+        // Agregar campos calculados a cada entrega
+        $deliveries->getCollection()->transform(function ($delivery) {
+            $delivery->status_label = $delivery->status_label;
+            $delivery->status_color = $delivery->status_color;
+            $delivery->can_be_edited = $delivery->canBeEdited();
+            $delivery->can_be_deleted = $delivery->canBeDeleted();
+            $delivery->total_points = $delivery->total_points;
+            return $delivery;
+        });
+
         $zones = Zone::active()->orderBy('name')->get();
 
         return Inertia::render('entregas/gestionar', [
             'deliveries' => $deliveries,
             'zones' => $zones,
             'filters' => $request->only(['search']),
+            'availableStatuses' => [
+                Delivery::STATUS_PROGRAMADA => Delivery::STATUSES[Delivery::STATUS_PROGRAMADA],
+                Delivery::STATUS_CANCELADA => Delivery::STATUSES[Delivery::STATUS_CANCELADA],
+            ],
         ]);
     }
 
@@ -91,6 +105,12 @@ class DeliveryController extends Controller
      */
     public function update(UpdateDeliveryRequest $request, Delivery $delivery)
     {
+        // Verificar si la entrega se puede editar
+        if (!$delivery->canBeEdited()) {
+            return back()
+                ->with('error', 'No se puede editar una entrega que ya está completada o cancelada.');
+        }
+
         $validated = $request->validated();
 
         $delivery->update($validated);
@@ -105,6 +125,12 @@ class DeliveryController extends Controller
      */
     public function destroy(Delivery $delivery)
     {
+        // Verificar si la entrega se puede eliminar
+        if (!$delivery->canBeDeleted()) {
+            return back()
+                ->with('error', 'No se puede eliminar una entrega que está en progreso, completada o cancelada.');
+        }
+
         try {
             $deliveryName = $delivery->name;
             $delivery->delete();
@@ -176,5 +202,51 @@ class DeliveryController extends Controller
             return back()
                 ->with('error', 'No se pudo duplicar la entrega. Inténtalo nuevamente.');
         }
+    }
+
+    /**
+     * Iniciar una entrega
+     */
+    public function start(Delivery $delivery)
+    {
+        if (!$delivery->canBeStarted()) {
+            return back()
+                ->with('error', 'No se puede iniciar esta entrega. Verifica que tenga puntos de entrega asignados.');
+        }
+
+        $delivery->start();
+
+        return back()
+            ->with('success', "Entrega '{$delivery->name}' iniciada exitosamente.");
+    }
+
+    /**
+     * Cancelar una entrega
+     */
+    public function cancel(Delivery $delivery)
+    {
+        if (!$delivery->cancel()) {
+            return back()
+                ->with('error', 'No se puede cancelar una entrega que ya está completada.');
+        }
+
+        return back()
+            ->with('success', "Entrega '{$delivery->name}' cancelada exitosamente.");
+    }
+
+    /**
+     * Reactivar una entrega (cambiar de cancelada a programada)
+     */
+    public function reactivate(Delivery $delivery)
+    {
+        if ($delivery->status !== Delivery::STATUS_CANCELADA) {
+            return back()
+                ->with('error', 'Solo se pueden reactivar entregas canceladas.');
+        }
+
+        $delivery->update(['status' => Delivery::STATUS_PROGRAMADA]);
+
+        return back()
+            ->with('success', "Entrega '{$delivery->name}' reactivada exitosamente.");
     }
 }

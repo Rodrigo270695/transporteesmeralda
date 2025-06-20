@@ -19,6 +19,7 @@ interface Delivery {
     delivery_date: string;
     template_number: string;
     zone_id: number;
+    status: string;
     zone?: Zone;
     created_at: string;
     updated_at: string;
@@ -29,6 +30,7 @@ interface DeliveryModalProps {
     onClose: () => void;
     delivery?: Delivery | null;
     zones: Zone[];
+    availableStatuses: Record<string, string>;
     title: string;
     isDuplicating?: boolean;
     onSuccess: (message: string) => void;
@@ -40,6 +42,7 @@ export function DeliveryModal({
     onClose,
     delivery,
     zones,
+    availableStatuses,
     title,
     isDuplicating = false,
     onSuccess,
@@ -52,6 +55,7 @@ export function DeliveryModal({
         delivery_date: '',
         template_number: '',
         zone_id: '',
+        status: 'programada',
     });
 
     useEffect(() => {
@@ -65,6 +69,7 @@ export function DeliveryModal({
                     delivery_date: isDuplicating ? '' : formattedDate, // Si es duplicar, limpiar la fecha
                     template_number: delivery.template_number,
                     zone_id: delivery.zone_id.toString(),
+                    status: delivery.status,
                 });
             } else {
                 reset();
@@ -207,6 +212,30 @@ export function DeliveryModal({
                             </SelectContent>
                         </Select>
                         <InputError message={errors.zone_id} />
+                    </div>
+
+                    {/* Estado */}
+                    <div className="space-y-2">
+                        <Label htmlFor="status">
+                            Estado <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                            value={data.status}
+                            onValueChange={(value) => setData('status', value)}
+                            disabled={processing}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecciona un estado" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(availableStatuses).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                        {label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.status} />
                     </div>
 
                     {/* Botones */}

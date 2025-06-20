@@ -29,6 +29,21 @@ export interface DriverDelivery {
     status: 'programado' | 'en_proceso' | 'completado' | 'cancelado';
     stats: DeliveryStats;
     deliveryPoints?: DeliveryPoint[];
+    points?: Array<{
+        id: number;
+        route_order: number;
+        customer_name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        status: string;
+        amount_to_collect: number;
+        estimated_delivery_time?: string;
+        coordinates: {
+            latitude: number;
+            longitude: number;
+        };
+    }>;
 }
 
 export interface DriverDashboardProps {

@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, Truck, MapPin, Copy } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, Trash2, Truck, MapPin, Copy, X, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
@@ -26,6 +26,12 @@ interface Delivery {
     template_number: string;
     zone_id: number;
     zone?: Zone;
+    status: 'programada' | 'en_progreso' | 'completada' | 'cancelada';
+    status_label: string;
+    status_color: string;
+    can_be_edited: boolean;
+    can_be_deleted: boolean;
+    total_points: number;
     created_at: string;
     updated_at: string;
 }
@@ -46,6 +52,7 @@ interface Props {
         to: number;
     };
     zones: Zone[];
+    availableStatuses: Record<string, string>;
     filters?: {
         search?: string;
     };
@@ -62,7 +69,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarEntregas({ deliveries, zones, filters }: Props) {
+export default function GestionarEntregas({ deliveries, zones, availableStatuses, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
     const [isDuplicating, setIsDuplicating] = useState(false);
@@ -161,6 +168,24 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
         return selectedDelivery ? 'Editar Entrega' : 'Registrar Nueva Entrega';
     };
 
+
+
+    const handleCancelDelivery = (delivery: Delivery) => {
+        router.post(window.route('entregas.cancel', delivery.id), {}, {
+            onError: () => {
+                error('Error', 'No se pudo cancelar la entrega. Inténtalo nuevamente.');
+            }
+        });
+    };
+
+    const handleReactivateDelivery = (delivery: Delivery) => {
+        router.post(window.route('entregas.reactivate', delivery.id), {}, {
+            onError: () => {
+                error('Error', 'No se pudo reactivar la entrega. Inténtalo nuevamente.');
+            }
+        });
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -221,6 +246,12 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
 
                                         <div className="mb-4 space-y-2">
                                             <div>
+                                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">Estado:</span>
+                                                <span className={`inline-block px-2 py-1 text-xs rounded-full ${delivery.status_color}`}>
+                                                    {delivery.status_label}
+                                                </span>
+                                            </div>
+                                            <div>
                                                 <span className="text-xs text-muted-foreground dark:text-muted-foreground">Número de Plantilla:</span>
                                                 <p className="text-sm text-foreground dark:text-foreground font-mono">
                                                     {delivery.template_number}
@@ -230,6 +261,12 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                 <span className="text-xs text-muted-foreground dark:text-muted-foreground">Zona:</span>
                                                 <p className="text-sm text-foreground dark:text-foreground">
                                                     {delivery.zone?.name || 'Sin zona'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">Puntos:</span>
+                                                <p className="text-sm text-foreground dark:text-foreground">
+                                                    {delivery.total_points || 0} puntos
                                                 </p>
                                             </div>
                                         </div>
@@ -250,13 +287,19 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                         <MapPin className="mr-2 h-4 w-4" />
                                                         Ver puntos
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openEditModal(delivery)}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Edit2 className="mr-2 h-4 w-4" />
-                                                        Editar
-                                                    </DropdownMenuItem>
+
+
+
+                                                    {delivery.can_be_edited && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => openEditModal(delivery)}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <Edit2 className="mr-2 h-4 w-4" />
+                                                            Editar
+                                                        </DropdownMenuItem>
+                                                    )}
+
                                                     <DropdownMenuItem
                                                         onClick={() => openDuplicateModal(delivery)}
                                                         className="cursor-pointer"
@@ -264,13 +307,36 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                         <Copy className="mr-2 h-4 w-4" />
                                                         Duplicar
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openDeleteModal(delivery)}
-                                                        className="cursor-pointer text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Eliminar
-                                                    </DropdownMenuItem>
+
+                                                    {delivery.status === 'programada' && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleCancelDelivery(delivery)}
+                                                            className="cursor-pointer text-destructive focus:text-destructive"
+                                                        >
+                                                            <X className="mr-2 h-4 w-4" />
+                                                            Cancelar
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {delivery.status === 'cancelada' && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleReactivateDelivery(delivery)}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                                            Reactivar
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {delivery.can_be_deleted && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => openDeleteModal(delivery)}
+                                                            className="cursor-pointer text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Eliminar
+                                                        </DropdownMenuItem>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -283,9 +349,11 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="px-6 py-3">Nombre</TableHead>
+                                        <TableHead className="px-6 py-3">Estado</TableHead>
                                         <TableHead className="px-6 py-3">Fecha</TableHead>
                                         <TableHead className="px-6 py-3">Número de Plantilla</TableHead>
                                         <TableHead className="px-6 py-3">Zona</TableHead>
+                                        <TableHead className="px-6 py-3">Puntos</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -296,6 +364,11 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                 <div className="font-medium">
                                                     {delivery.name}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <span className={`inline-block px-2 py-1 text-xs rounded-full ${delivery.status_color}`}>
+                                                    {delivery.status_label}
+                                                </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
                                                 <span className="text-sm">
@@ -315,6 +388,11 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
+                                                <span className="text-sm">
+                                                    {delivery.total_points || 0} puntos
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
@@ -330,13 +408,19 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                             <MapPin className="mr-2 h-4 w-4" />
                                                             Ver puntos
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openEditModal(delivery)}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <Edit2 className="mr-2 h-4 w-4" />
-                                                            Editar
-                                                        </DropdownMenuItem>
+
+
+
+                                                        {delivery.can_be_edited && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => openEditModal(delivery)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <Edit2 className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                        )}
+
                                                         <DropdownMenuItem
                                                             onClick={() => openDuplicateModal(delivery)}
                                                             className="cursor-pointer"
@@ -344,13 +428,36 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                                                             <Copy className="mr-2 h-4 w-4" />
                                                             Duplicar
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openDeleteModal(delivery)}
-                                                            className="cursor-pointer text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Eliminar
-                                                        </DropdownMenuItem>
+
+                                                        {delivery.status === 'programada' && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleCancelDelivery(delivery)}
+                                                                className="cursor-pointer text-destructive focus:text-destructive"
+                                                            >
+                                                                <X className="mr-2 h-4 w-4" />
+                                                                Cancelar
+                                                            </DropdownMenuItem>
+                                                        )}
+
+                                                        {delivery.status === 'cancelada' && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleReactivateDelivery(delivery)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                                Reactivar
+                                                            </DropdownMenuItem>
+                                                        )}
+
+                                                        {delivery.can_be_deleted && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => openDeleteModal(delivery)}
+                                                                className="cursor-pointer text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -418,6 +525,7 @@ export default function GestionarEntregas({ deliveries, zones, filters }: Props)
                 }}
                 delivery={selectedDelivery}
                 zones={zones}
+                availableStatuses={availableStatuses}
                 title={getModalTitle()}
                 isDuplicating={isDuplicating}
                 onSuccess={(message) => message && success('¡Éxito!', message)}

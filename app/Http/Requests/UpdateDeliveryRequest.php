@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\Delivery;
 
 class UpdateDeliveryRequest extends FormRequest
 {
@@ -27,6 +28,7 @@ class UpdateDeliveryRequest extends FormRequest
             'delivery_date' => ['required', 'date'],
             'template_number' => ['required', 'string', 'max:15'],
             'zone_id' => ['required', 'exists:zones,id'],
+            'status' => ['sometimes', 'in:' . Delivery::STATUS_PROGRAMADA . ',' . Delivery::STATUS_CANCELADA],
         ];
     }
 
@@ -66,6 +68,7 @@ class UpdateDeliveryRequest extends FormRequest
             'template_number.max' => 'El número de plantilla no puede exceder 15 caracteres.',
             'zone_id.required' => 'La zona es obligatoria.',
             'zone_id.exists' => 'La zona seleccionada no es válida.',
+            'status.in' => 'El estado debe ser Programada o Cancelada.',
         ];
     }
 }

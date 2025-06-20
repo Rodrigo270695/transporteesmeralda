@@ -188,6 +188,36 @@ class DeliveryPoint extends Model
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 🔔 EVENTOS DEL MODELO
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Boot del modelo para eventos
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Cuando se actualiza un punto de entrega
+        static::updated(function ($deliveryPoint) {
+            // Si cambió el estado, verificar si la entrega debe cambiar de estado
+            if ($deliveryPoint->isDirty('status')) {
+                $deliveryPoint->delivery->updateStatusIfNeeded();
+            }
+        });
+
+        // Cuando se crea un punto de entrega
+        static::created(function ($deliveryPoint) {
+            $deliveryPoint->delivery->updateStatusIfNeeded();
+        });
+
+        // Cuando se elimina un punto de entrega
+        static::deleted(function ($deliveryPoint) {
+            $deliveryPoint->delivery->updateStatusIfNeeded();
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 🔍 SCOPES
     // ═══════════════════════════════════════════════════════════
 

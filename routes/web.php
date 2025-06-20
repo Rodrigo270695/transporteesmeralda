@@ -152,6 +152,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('{delivery}', [DeliveryController::class, 'update'])->name('update');
         Route::delete('{delivery}', [DeliveryController::class, 'destroy'])->name('destroy');
 
+        // Rutas para cambio de estado
+        Route::post('{delivery}/iniciar', [DeliveryController::class, 'start'])->name('start');
+        Route::post('{delivery}/cancelar', [DeliveryController::class, 'cancel'])->name('cancel');
+        Route::post('{delivery}/reactivar', [DeliveryController::class, 'reactivate'])->name('reactivate');
+
                 // Rutas de Puntos de Entrega
         Route::prefix('{delivery}/puntos')->name('puntos.')->group(function () {
             Route::get('/', [DeliveryPointController::class, 'index'])->name('index');
