@@ -21,9 +21,9 @@ use Exception;
 class DriverController extends Controller
 {
     /**
-     * Dashboard del conductor - Lista sus entregas filtradas por fecha
+     * Dashboard del conductor - Lista sus puntos de entrega directamente
      */
-        public function dashboard(Request $request): Response
+    public function dashboard(Request $request): Response
     {
         $user = Auth::user();
 
@@ -37,8 +37,9 @@ class DriverController extends Controller
 
         if ($mobilities->isEmpty()) {
             return Inertia::render('conductor/Dashboard', [
-                'deliveries' => [],
-                'mobilities' => [],
+                'deliveryPoints' => [],
+                'stats' => [],
+                'user' => $user,
                 'message' => 'No tienes vehículos asignados. Contacta al administrador.'
             ]);
         }
@@ -46,86 +47,121 @@ class DriverController extends Controller
         // Filtro de fecha (por defecto hoy en zona horaria de Lima)
         $filterDate = $request->get('date', now('America/Lima')->toDateString());
 
-        // Obtener entregas donde el conductor tiene puntos asignados
-        $deliveries = Delivery::whereHas('deliveryPoints', function($query) use ($mobilities) {
-                $query->whereIn('mobility_id', $mobilities->pluck('id'));
-            })
-            ->whereDate('delivery_date', $filterDate)
-            ->with([
-                'deliveryPoints' => function($query) use ($mobilities) {
-                    $query->whereIn('mobility_id', $mobilities->pluck('id'))
-                          ->with(['client', 'seller', 'mobility'])
-                          ->orderBy('route_order');
-                }
+        // Obtener DIRECTAMENTE todos los puntos de entrega del conductor para el día
+        $deliveryPoints = DeliveryPoint::with([
+                'delivery',
+                'client',
+                'seller',
+                'mobility',
+                'paymentMethod'
             ])
-            ->orderBy('delivery_date', 'desc')
-            ->paginate(10);
+            ->whereHas('delivery', function($query) use ($filterDate) {
+                $query->whereDate('delivery_date', $filterDate);
+            })
+            ->whereIn('mobility_id', $mobilities->pluck('id'))
+            ->orderBy('route_order')
+            ->get();
 
-        // Agregar estadísticas, puntos formateados y status a cada entrega
-        $deliveries->getCollection()->transform(function ($delivery) {
-            $points = $delivery->deliveryPoints;
+        // Calcular estadísticas de los puntos
+        $totalPoints = $deliveryPoints->count();
+        $completedPoints = $deliveryPoints->where('status', 'entregado')->count();
+        $pendingPoints = $deliveryPoints->whereIn('status', ['pendiente', 'reagendado'])->count();
+        $inRoutePoints = $deliveryPoints->where('status', 'en_ruta')->count();
+        $canceledPoints = $deliveryPoints->where('status', 'cancelado')->count();
 
-            $totalPoints = $points->count();
-            $completedPoints = $points->where('status', 'entregado')->count();
-            $pendingPoints = $points->whereIn('status', ['pendiente', 'reagendado'])->count();
-            $inRoutePoints = $points->where('status', 'en_ruta')->count();
-            $canceledPoints = $points->where('status', 'cancelado')->count();
+        $stats = [
+            'total_points' => $totalPoints,
+            'completed_points' => $completedPoints,
+            'pending_points' => $pendingPoints,
+            'in_route_points' => $inRoutePoints,
+            'canceled_points' => $canceledPoints,
+            'total_to_collect' => $deliveryPoints->sum('amount_to_collect'),
+            'total_collected' => $deliveryPoints->where('status', 'entregado')->sum('amount_collected'),
+            'progress_percentage' => $totalPoints > 0
+                ? round(($completedPoints / $totalPoints) * 100, 1)
+                : 0
+        ];
 
-            $delivery->stats = [
-                'total_points' => $totalPoints,
-                'completed_points' => $completedPoints,
-                'pending_points' => $pendingPoints,
-                'in_route_points' => $inRoutePoints,
-                'total_to_collect' => $points->sum('amount_to_collect'),
-                'total_collected' => $points->where('status', 'entregado')->sum('amount_collected'),
-                'progress_percentage' => $totalPoints > 0
-                    ? round(($completedPoints / $totalPoints) * 100, 1)
-                    : 0
-            ];
-
-            // Formatear puntos para el mapa del conductor
-            $delivery->points = $points->map(function($point) {
-                return [
-                    'id' => $point->id,
-                    'route_order' => (int) ($point->route_order ?? 0),
-                    'customer_name' => $point->client ? $point->client->first_name . ' ' . $point->client->last_name : 'Cliente',
-                    'address' => $point->address,
+        // Formatear puntos con toda la información necesaria
+        $formattedPoints = $deliveryPoints->map(function($point) {
+            return [
+                'id' => $point->id,
+                'delivery_id' => $point->delivery_id,
+                'route_order' => (int) ($point->route_order ?? 0),
+                'point_name' => $point->point_name,
+                'address' => $point->address,
+                'reference' => $point->reference,
+                'status' => $point->status,
+                'status_label' => $this->getStatusLabel($point->status),
+                'priority' => $point->priority,
+                'amount_to_collect' => (float) ($point->amount_to_collect ?? 0),
+                'amount_collected' => (float) ($point->amount_collected ?? 0),
+                'estimated_delivery_time' => $point->estimated_delivery_time,
+                'delivery_instructions' => $point->delivery_instructions,
+                'coordinates' => [
                     'latitude' => (float) ($point->latitude ?? 0),
                     'longitude' => (float) ($point->longitude ?? 0),
-                    'status' => $point->status,
-                    'amount_to_collect' => (float) ($point->amount_to_collect ?? 0),
-                    'estimated_delivery_time' => $point->estimated_delivery_time,
-                    'coordinates' => [
-                        'latitude' => (float) ($point->latitude ?? 0),
-                        'longitude' => (float) ($point->longitude ?? 0),
-                    ]
-                ];
-            });
-
-            // Calcular status de la entrega basado en los puntos
-            if ($totalPoints == 0) {
-                $delivery->status = 'programado';
-            } elseif ($completedPoints == $totalPoints) {
-                $delivery->status = 'completado';
-            } elseif ($inRoutePoints > 0 || $completedPoints > 0) {
-                $delivery->status = 'en_proceso';
-            } elseif ($canceledPoints == $totalPoints) {
-                $delivery->status = 'cancelado';
-            } else {
-                $delivery->status = 'programado';
-            }
-
-            return $delivery;
+                ],
+                'client' => [
+                    'id' => $point->client?->id,
+                    'name' => $point->client ? $point->client->first_name . ' ' . $point->client->last_name : 'Cliente',
+                    'phone' => $point->client?->phone,
+                    'email' => $point->client?->email,
+                ],
+                'seller' => [
+                    'id' => $point->seller?->id,
+                    'name' => $point->seller ? $point->seller->first_name . ' ' . $point->seller->last_name : null,
+                ],
+                'delivery' => [
+                    'id' => $point->delivery?->id,
+                    'name' => $point->delivery?->name,
+                    'delivery_date' => $point->delivery?->delivery_date,
+                ],
+                'mobility' => [
+                    'id' => $point->mobility?->id,
+                    'name' => $point->mobility?->name,
+                    'plate' => $point->mobility?->plate,
+                ],
+                'payment_method' => $point->paymentMethod ? [
+                    'id' => $point->paymentMethod->id,
+                    'name' => $point->paymentMethod->name,
+                ] : null,
+                'payment_reference' => $point->payment_reference,
+                'payment_notes' => $point->payment_notes,
+                'payment_image' => $point->payment_image,
+                'delivery_image' => $point->delivery_image,
+                'observation' => $point->observation,
+                'arrival_time' => $point->arrival_time,
+                'departure_time' => $point->departure_time,
+                'delivered_at' => $point->delivered_at,
+                'cancellation_reason' => $point->cancellation_reason,
+            ];
         });
 
         return Inertia::render('conductor/Dashboard', [
-            'deliveries' => $deliveries,
-            'mobilities' => $mobilities,
+            'deliveryPoints' => $formattedPoints,
+            'stats' => $stats,
+            'user' => $user,
+            'paymentMethods' => PaymentMethod::where('status', true)->get(['id', 'name']),
             'filters' => [
                 'date' => $filterDate
-            ],
-            'user' => $user
+            ]
         ]);
+    }
+
+    /**
+     * Obtener label legible para el status
+     */
+    private function getStatusLabel(string $status): string
+    {
+        return match($status) {
+            'pendiente' => 'Pendiente',
+            'en_ruta' => 'En Ruta',
+            'entregado' => 'Entregado',
+            'cancelado' => 'Cancelado',
+            'reagendado' => 'Reagendado',
+            default => 'Desconocido',
+        };
     }
 
     /**
@@ -195,7 +231,6 @@ class DriverController extends Controller
                     'payment_image' => $point->payment_image,
                     'delivery_image' => $point->delivery_image,
                     'observation' => $point->observation,
-                    'customer_rating' => $point->customer_rating,
                     'cancellation_reason' => $point->cancellation_reason,
                     'arrival_time' => $point->arrival_time,
                     'departure_time' => $point->departure_time,
@@ -265,7 +300,6 @@ class DriverController extends Controller
                         'payment_notes' => $request->payment_notes,
                         'delivery_image' => $request->delivery_image,
                         'observation' => $request->observation,
-                        'customer_rating' => $request->customer_rating,
                         'delivered_at' => now(),
                         'departure_time' => now(),
                     ]);
@@ -590,5 +624,142 @@ class DriverController extends Controller
         Storage::disk('public')->put($filePath, $image_base64);
 
         return $filePath;
+    }
+
+    /**
+     * Marcar punto como "en ruta"
+     */
+    public function startPoint(DeliveryPoint $deliveryPoint): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Verificar que el punto pertenece al conductor
+            if ($deliveryPoint->mobility->conductor_user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para actualizar este punto.'
+                ], 403);
+            }
+
+            // Verificar que el punto esté en estado pendiente
+            if (!in_array($deliveryPoint->status, ['pendiente', 'reagendado'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden iniciar puntos pendientes o reagendados.'
+                ], 400);
+            }
+
+            // Actualizar estado
+            $deliveryPoint->update([
+                'status' => 'en_ruta',
+                'arrival_time' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Punto marcado como en ruta exitosamente.',
+                'data' => [
+                    'id' => $deliveryPoint->id,
+                    'status' => $deliveryPoint->status,
+                    'status_label' => $this->getStatusLabel($deliveryPoint->status),
+                    'arrival_time' => $deliveryPoint->arrival_time,
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Error al iniciar punto: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Completar punto de entrega con información mínima
+     */
+    public function completePoint(DeliveryPoint $deliveryPoint, Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Verificar que el punto pertenece al conductor
+            if ($deliveryPoint->mobility->conductor_user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para actualizar este punto.'
+                ], 403);
+            }
+
+            // Verificar que el punto esté en ruta
+            if ($deliveryPoint->status !== 'en_ruta') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden completar puntos que estén en ruta.'
+                ], 400);
+            }
+
+            // Validar datos requeridos
+            $validated = $request->validate([
+                'payment_method_id' => 'required|exists:payment_methods,id',
+                'amount_collected' => 'required|numeric|min:0',
+                'payment_reference' => 'nullable|string|max:50',
+                'payment_notes' => 'nullable|string',
+                'payment_image' => 'nullable|string',
+                'delivery_image' => 'nullable|string',
+                'observation' => 'nullable|string',
+            ]);
+
+            // Procesar imágenes base64 si existen
+            if (!empty($validated['payment_image'])) {
+                $validated['payment_image'] = $this->saveBase64Image(
+                    $validated['payment_image'],
+                    'payments'
+                );
+            }
+
+            if (!empty($validated['delivery_image'])) {
+                $validated['delivery_image'] = $this->saveBase64Image(
+                    $validated['delivery_image'],
+                    'deliveries'
+                );
+            }
+
+            // Actualizar el punto
+            $deliveryPoint->update([
+                'status' => 'entregado',
+                'payment_method_id' => $validated['payment_method_id'],
+                'amount_collected' => $validated['amount_collected'],
+                'payment_reference' => $validated['payment_reference'] ?? null,
+                'payment_notes' => $validated['payment_notes'] ?? null,
+                'payment_image' => $validated['payment_image'] ?? null,
+                'delivery_image' => $validated['delivery_image'] ?? null,
+                'observation' => $validated['observation'] ?? null,
+                'delivered_at' => now(),
+                'departure_time' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Punto completado exitosamente.',
+                'data' => [
+                    'id' => $deliveryPoint->id,
+                    'status' => $deliveryPoint->status,
+                    'status_label' => $this->getStatusLabel($deliveryPoint->status),
+                    'amount_collected' => $deliveryPoint->amount_collected,
+                    'delivered_at' => $deliveryPoint->delivered_at,
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Error al completar punto: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

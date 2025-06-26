@@ -2,14 +2,79 @@ import { DeliveryPoint } from './delivery-points';
 import { User } from './index';
 
 export interface DriverStats {
-    total: number;
-    pendientes: number;
-    en_ruta: number;
-    entregados: number;
-    cancelados: number;
-    monto_total: number;
-    monto_cobrado: number;
-    progreso: number;
+    total_points: number;
+    completed_points: number;
+    pending_points: number;
+    in_route_points: number;
+    canceled_points: number;
+    total_to_collect: number;
+    total_collected: number;
+    progress_percentage: number;
+}
+
+export interface DriverDashboardProps {
+    deliveryPoints: DriverDeliveryPoint[];
+    stats: DriverStats;
+    user: User;
+    paymentMethods: PaymentMethod[];
+    filters?: {
+        date: string;
+    };
+    message?: string;
+}
+
+export interface DriverDeliveryPoint {
+    id: number;
+    delivery_id: number;
+    route_order: number;
+    point_name: string;
+    address: string;
+    reference?: string;
+    status: 'pendiente' | 'en_ruta' | 'entregado' | 'cancelado' | 'reagendado';
+    status_label: string;
+    priority: 'alta' | 'media' | 'baja';
+    amount_to_collect: number;
+    amount_collected?: number;
+    estimated_delivery_time?: string;
+    delivery_instructions?: string;
+    coordinates: {
+        latitude: number;
+        longitude: number;
+    };
+    client: {
+        id: number;
+        name: string;
+        phone?: string;
+        email?: string;
+    };
+    seller?: {
+        id: number;
+        name: string;
+    };
+    delivery: {
+        id: number;
+        name: string;
+        delivery_date: string;
+    };
+    mobility: {
+        id: number;
+        name: string;
+        plate: string;
+    };
+    payment_method?: {
+        id: number;
+        name: string;
+    };
+    payment_reference?: string;
+    payment_notes?: string;
+    payment_image?: string;
+    delivery_image?: string;
+    observation?: string;
+    customer_rating?: number;
+    arrival_time?: string;
+    departure_time?: string;
+    delivered_at?: string;
+    cancellation_reason?: string;
 }
 
 export interface DeliveryStats {
@@ -44,20 +109,6 @@ export interface DriverDelivery {
             longitude: number;
         };
     }>;
-}
-
-export interface DriverDashboardProps {
-    deliveries?: {
-        data: DriverDelivery[];
-        links: any;
-        meta: any;
-    };
-    mobilities?: Mobility[];
-    filters?: {
-        date: string;
-    };
-    user?: User;
-    message?: string;
 }
 
 export interface DriverDeliveryProps {

@@ -379,6 +379,8 @@
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
 }
 
 .conductor-map .leaflet-container {
@@ -587,4 +589,41 @@
     background: rgba(31, 41, 55, 0.95);
     color: #f9fafb;
     border: 1px solid rgba(55, 65, 81, 0.3);
+}
+
+/* Asegurar que los modales siempre aparezcan por encima de mapas */
+.conductor-map {
+    position: relative;
+    z-index: 1;
+}
+
+/* Override para modales específicos */
+[data-radix-popper-content-wrapper],
+[data-slot="dialog-overlay"],
+[data-slot="dialog-content"] {
+    z-index: 10001 !important;
+}
+
+/* Específico para modal de completar entrega */
+.point-form-modal {
+    z-index: 10002 !important;
+}
+
+.point-form-modal [data-slot="dialog-overlay"] {
+    z-index: 10001 !important;
+}
+
+.point-form-modal [data-slot="dialog-content"] {
+    z-index: 10002 !important;
+}
+
+/* Asegurar que selects y dropdowns aparezcan por encima de modales */
+[data-slot="select-content"],
+[data-radix-select-content] {
+    z-index: 10003 !important;
+}
+
+/* Override para otros dropdowns dentro de modales */
+.point-form-modal [data-slot="select-content"] {
+    z-index: 10004 !important;
 }

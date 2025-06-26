@@ -199,6 +199,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('dashboard', [DriverController::class, 'dashboard'])->name('dashboard');
         Route::get('entrega/{delivery}', [DriverController::class, 'delivery'])->name('entrega');
         Route::put('punto/{deliveryPoint}', [DriverController::class, 'updatePoint'])->name('actualizar-punto');
+
+        // Nuevas rutas para manejo directo de puntos desde dashboard
+        Route::post('punto/{deliveryPoint}/iniciar', [DriverController::class, 'startPoint'])->name('punto.iniciar');
+        Route::post('punto/{deliveryPoint}/completar', [DriverController::class, 'completePoint'])->name('punto.completar');
+
         Route::post('imagenes', [DriverController::class, 'uploadImages'])->name('subir-imagenes');
         Route::post('ubicacion', [DriverController::class, 'updateLocation'])->name('actualizar-ubicacion');
         Route::get('entrega/{delivery}/siguiente-punto', [DriverController::class, 'nextPoint'])->name('siguiente-punto');
