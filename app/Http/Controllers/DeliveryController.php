@@ -51,10 +51,7 @@ class DeliveryController extends Controller
             'deliveries' => $deliveries,
             'zones' => $zones,
             'filters' => $request->only(['search']),
-            'availableStatuses' => [
-                Delivery::STATUS_PROGRAMADA => Delivery::STATUSES[Delivery::STATUS_PROGRAMADA],
-                Delivery::STATUS_CANCELADA => Delivery::STATUSES[Delivery::STATUS_CANCELADA],
-            ],
+            'availableStatuses' => Delivery::STATUSES,
         ]);
     }
 
