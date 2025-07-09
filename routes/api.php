@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\Api\Mobile\MobileAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,4 +39,28 @@ Route::middleware(['auth:web'])->prefix('conductor')->name('api.conductor.')->gr
     // Notificaciones Push
     Route::post('push-subscription', [DriverController::class, 'storePushSubscription'])->name('push-subscription.store');
     Route::delete('push-subscription', [DriverController::class, 'removePushSubscription'])->name('push-subscription.remove');
+});
+
+// ══════════════════════════════════════════════════════════════
+// 📱 RUTAS API PARA APLICACIÓN MÓVIL
+// ══════════════════════════════════════════════════════════════
+
+Route::prefix('mobile')->name('mobile.')->group(function () {
+
+    // Rutas públicas (sin autenticación)
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::post('login', [MobileAuthController::class, 'login'])->name('login');
+    });
+
+    // Rutas protegidas (requieren autenticación)
+    Route::middleware('auth:sanctum')->group(function () {
+
+        // Autenticación
+        Route::prefix('auth')->name('auth.')->group(function () {
+            Route::post('logout', [MobileAuthController::class, 'logout'])->name('logout');
+            Route::get('me', [MobileAuthController::class, 'me'])->name('me');
+            Route::post('update-location', [MobileAuthController::class, 'updateLocation'])->name('update-location');
+        });
+
+    });
 });
