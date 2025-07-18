@@ -191,7 +191,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                         {/* Additional info específica de transporte */}
                         <div className="mt-6 text-center">
                             <p className="text-xs text-muted-foreground">
-                                📍 Cobertura nacional • Soporte: <span className="text-primary font-medium">soporte@esmeralda.pe</span>
+                                📍 Cobertura nacional • Soporte: <span className="text-primary font-medium">soporte@transportes-esmeralda.com</span>
                             </p>
                         </div>
                     </div>

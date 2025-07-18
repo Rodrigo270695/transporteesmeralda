@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             'dni' => '77344506',
             'phone' => '987654321',
             'email' => 'admin@transportesesmeralda.com',
-            'password' => Hash::make('admin123'),
+            'password' => Hash::make('*Rodrigo95*'),
         ]);
 
         // Assign admin role
