@@ -1,8 +1,8 @@
 import { NavMain } from '@/components/organisms/nav-main';
 import { NavUser } from '@/components/molecules/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutGrid,
     Users,
@@ -113,6 +113,37 @@ const mainNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+
+    // Verificar roles del usuario
+    const userRoles = (auth.user as any)?.roles || [];
+    const isAdmin = Array.isArray(userRoles) && userRoles.some((role: any) => role.name === 'admin');
+    const isConductor = Array.isArray(userRoles) && userRoles.some((role: any) => role.name === 'conductor');
+
+            // Filtrar items del menú según el rol
+    const getFilteredNavItems = (): NavItem[] => {
+        if (isConductor) {
+            // Para conductores: Dashboard, Transportes y Gestión (solo Vista Conductor)
+            return mainNavItems.filter(item => {
+                return item.title === 'Dashboard' || item.title === 'Transportes' || item.title === 'Gestión';
+            }).map(item => {
+                if (item.title === 'Gestión') {
+                    // Para Gestión, filtrar solo Vista Conductor
+                    return {
+                        ...item,
+                        items: item.items?.filter(subItem => subItem.title === 'Vista Conductor') || []
+                    };
+                }
+                return item; // Dashboard y Transportes se mantienen igual
+            });
+        }
+
+        // Para administradores: mostrar todo
+        return mainNavItems;
+    };
+
+    const filteredNavItems = getFilteredNavItems();
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -128,7 +159,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={filteredNavItems} />
             </SidebarContent>
 
             <SidebarFooter>

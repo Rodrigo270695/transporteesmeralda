@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Mobility;
 use App\Models\User;
+use App\Exports\MobilityExport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MobilityController extends Controller
 {
@@ -14,10 +18,20 @@ class MobilityController extends Controller
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
         $query = Mobility::with(['conductor', 'liquidator', 'soat', 'technicalReview', 'permit', 'fireExtinguisher', 'propertyCard']);
 
-        // Aplicar filtro de búsqueda si existe
-        if ($request->has('search') && !empty($request->search)) {
+        // Verificar si es conductor (roles ya cargados en middleware)
+        $userRoles = $user->roles->pluck('name')->toArray();
+        $isConductor = in_array('conductor', $userRoles);
+
+        // Si el usuario es conductor, filtrar solo sus movilidades
+        if ($isConductor) {
+            $query->where('conductor_user_id', $user->id);
+        }
+
+        // Aplicar filtro de búsqueda si existe (solo para administradores)
+        if (!$isConductor && $request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -42,6 +56,7 @@ class MobilityController extends Controller
             'mobilities' => $mobilities,
             'filters' => $request->only(['search']),
             'conductors' => $conductors,
+            'userRole' => $isConductor ? 'conductor' : 'admin',
         ]);
     }
 
@@ -83,6 +98,17 @@ class MobilityController extends Controller
      */
     public function show(Mobility $mobility)
     {
+        $user = Auth::user();
+
+        // Verificar si es conductor (roles ya cargados en middleware)
+        $userRoles = $user->roles->pluck('name')->toArray();
+        $isConductor = in_array('conductor', $userRoles);
+
+        // Si es conductor, verificar que puede ver esta movilidad
+        if ($isConductor && $mobility->conductor_user_id !== $user->id) {
+            abort(403, 'No tienes permisos para ver esta movilidad.');
+        }
+
         $mobility->load([
             'conductor',
             'liquidator',
@@ -95,6 +121,7 @@ class MobilityController extends Controller
 
         return Inertia::render('movilidad/detalles', [
             'mobility' => $mobility,
+            'userRole' => $isConductor ? 'conductor' : 'admin',
         ]);
     }
 
@@ -146,6 +173,21 @@ class MobilityController extends Controller
         } catch (\Exception $e) {
             return back()
                 ->with('error', 'No se pudo eliminar la movilidad. Inténtalo nuevamente.');
+        }
+    }
+
+    /**
+     * Export mobilities to Excel
+     */
+    public function export()
+    {
+        try {
+            $fileName = 'reporte_movilidades_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return Excel::download(new MobilityExport, $fileName);
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Error al generar el reporte Excel. Inténtalo nuevamente.');
         }
     }
 }

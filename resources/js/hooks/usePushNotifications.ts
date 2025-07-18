@@ -257,8 +257,8 @@ export const usePushNotifications = (
 
             const options: NotificationOptions = {
                 body: data.body,
-                icon: data.icon || '/icons/icon-192x192.svg',
-                badge: enableBadge ? (data.badge || '/icons/icon-72x72.svg') : undefined,
+                icon: data.icon || '/icons/icon-192x192.png',
+                badge: enableBadge ? (data.badge || '/icons/icon-72x72.png') : undefined,
                 image: data.image,
                 data: data.data || {},
                 actions: data.actions || [],
@@ -336,7 +336,7 @@ export const usePushNotifications = (
         await showNotification({
             title: '🚛 Transporte Esmeralda',
             body: 'Notificación de prueba funcionando correctamente',
-            icon: '/icons/icon-192x192.svg',
+                            icon: '/icons/icon-192x192.png',
             data: { type: 'test' },
             actions: [
                 {

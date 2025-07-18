@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Rutas API para conductores (PWA)
-Route::middleware(['auth:web'])->prefix('conductor')->name('api.conductor.')->group(function () {
+Route::middleware(['web', 'auth'])->prefix('conductor')->name('api.conductor.')->group(function () {
     // Ubicación
     Route::post('location', [DriverController::class, 'updateLocation'])->name('location');
     Route::post('location/bulk', [DriverController::class, 'updateLocationBulk'])->name('location.bulk');
@@ -60,6 +60,27 @@ Route::prefix('mobile')->name('mobile.')->group(function () {
             Route::post('logout', [MobileAuthController::class, 'logout'])->name('logout');
             Route::get('me', [MobileAuthController::class, 'me'])->name('me');
             Route::post('update-location', [MobileAuthController::class, 'updateLocation'])->name('update-location');
+        });
+
+        // Puntos de entrega
+        Route::prefix('delivery-points')->name('delivery-points.')->group(function () {
+            Route::get('today', [MobileAuthController::class, 'getTodayDeliveryPoints'])->name('today');
+            Route::get('history', [MobileAuthController::class, 'getClientDeliveryHistory'])->name('history');
+
+            // Nueva ruta para puntos entregados pendientes de calificación
+            Route::get('pending-rating', [MobileAuthController::class, 'getDeliveredPointsForRating'])->name('pending-rating');
+
+            // Nueva ruta para calificar un punto de entrega
+            Route::post('{deliveryPointId}/rate', [MobileAuthController::class, 'rateDeliveryService'])->name('rate');
+        });
+
+        // Rutas de notificaciones simplificadas
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [MobileAuthController::class, 'getNotifications'])->name('index');
+            Route::get('unread-count', [MobileAuthController::class, 'getUnreadNotificationsCount'])->name('unread-count');
+            Route::put('{notificationId}/read', [MobileAuthController::class, 'markNotificationAsRead'])->name('mark-read');
+            Route::post('mark-all-read', [MobileAuthController::class, 'markAllNotificationsAsRead'])->name('mark-all-read');
+            Route::delete('{notificationId}', [MobileAuthController::class, 'deleteNotification'])->name('delete');
         });
 
     });

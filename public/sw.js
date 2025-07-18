@@ -10,8 +10,8 @@ const API_CACHE = 'esmeralda-api-v3';
 const STATIC_URLS = [
   '/',
   '/manifest.json',
-  '/icons/icon-192x192.svg',
-  '/icons/icon-512x512.svg',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   '/offline.html'
 ];
 
@@ -350,8 +350,8 @@ self.addEventListener('push', (event) => {
   const options = {
     title: data.title || 'Transporte Esmeralda',
     body: data.body || 'Nueva notificación',
-    icon: '/icons/icon-192x192.svg',
-    badge: '/icons/icon-72x72.svg',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
     data: data.data || {},
     actions: [
       {

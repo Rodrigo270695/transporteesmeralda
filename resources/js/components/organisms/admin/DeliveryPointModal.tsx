@@ -333,7 +333,7 @@ export default function DeliveryPointModal({
                                             onOpenChange={(open) => {
                                                 // Debug removido
                                             }}
-                                            value={watch('client_user_id')?.toString()}
+                                            value={watch('client_user_id')?.toString() || ""}
                                         >
                                             <SelectTrigger
                                                 className={errors.client_user_id ? 'border-red-500' : ''}
@@ -377,7 +377,7 @@ export default function DeliveryPointModal({
                                             onValueChange={(value) => {
                                                 setValue('seller_id', parseInt(value), { shouldValidate: true });
                                             }}
-                                            value={watch('seller_id')?.toString()}
+                                            value={watch('seller_id')?.toString() || ""}
                                         >
                                             <SelectTrigger className={errors.seller_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder={
@@ -491,7 +491,7 @@ export default function DeliveryPointModal({
                                             onValueChange={(value) => {
                                                 setValue('mobility_id', parseInt(value), { shouldValidate: true });
                                             }}
-                                            value={watch('mobility_id')?.toString()}
+                                            value={watch('mobility_id')?.toString() || ""}
                                         >
                                             <SelectTrigger className={errors.mobility_id ? 'border-red-500' : ''}>
                                                 <SelectValue placeholder={

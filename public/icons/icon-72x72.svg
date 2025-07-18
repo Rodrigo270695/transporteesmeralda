@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
-  <rect width="72" height="72" rx="16" fill="#059669"/>
-  <g transform="translate(16, 16)">
-    <path d="M32 8V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h2v2a2 2 0 0 0 2 2h22a2 2 0 0 0 2-2v-2h2a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2z" fill="#ffffff"/>
-    <circle cx="10" cy="24" r="3" fill="#059669"/>
-    <circle cx="26" cy="24" r="3" fill="#059669"/>
-    <text x="20" y="18" text-anchor="middle" fill="#059669" font-family="Arial" font-size="8" font-weight="bold">TE</text>
-  </g>
-</svg>

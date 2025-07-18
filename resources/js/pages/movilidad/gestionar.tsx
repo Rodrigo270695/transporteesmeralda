@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, Eye, Car } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, Trash2, Eye, Car, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
@@ -56,6 +56,7 @@ interface Props {
         search?: string;
     };
     conductors: User[];
+    userRole: 'admin' | 'conductor';
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -69,7 +70,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarMovilidad({ mobilities, filters, conductors }: Props) {
+export default function GestionarMovilidad({ mobilities, filters, conductors, userRole }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMobility, setSelectedMobility] = useState<Mobility | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -154,6 +155,16 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
         setSearchQuery('');
     };
 
+    const handleExportExcel = () => {
+        try {
+            window.open(window.route('movilidad.export'), '_blank');
+            success('Descarga iniciada', 'El reporte Excel se está descargando...');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            error('Error de descarga', 'No se pudo descargar el reporte Excel.');
+        }
+    };
+
     const getModalTitle = () => {
         return selectedMobility ? 'Editar Movilidad' : 'Registrar Nueva Movilidad';
     };
@@ -202,21 +213,34 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                         />
                     </div>
 
-                    {/* Buscador y Botón Nueva Movilidad */}
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                        <div className="flex-1">
-                            <SearchInput
-                                placeholder="Buscar por nombre, placa o conductor..."
-                                value={searchQuery}
-                                onChange={setSearchQuery}
-                                onClear={clearSearch}
-                            />
+                    {/* Buscador y Botones - Solo para administradores */}
+                    {userRole === 'admin' && (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                            <div className="flex-1">
+                                <SearchInput
+                                    placeholder="Buscar por nombre, placa o conductor..."
+                                    value={searchQuery}
+                                    onChange={setSearchQuery}
+                                    onClear={clearSearch}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={handleExportExcel}
+                                    variant="outline"
+                                    className="hidden sm:flex cursor-pointer"
+                                    title="Descargar reporte Excel"
+                                >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Excel
+                                </Button>
+                                <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    <span className="sm:inline">Nueva Movilidad</span>
+                                </Button>
+                            </div>
                         </div>
-                        <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
-                            <Plus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nueva Movilidad</span>
-                        </Button>
-                    </div>
+                    )}
                 </div>
 
                 {/* Mobilities Table */}
@@ -264,20 +288,24 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                                                         <Eye className="mr-2 h-4 w-4" />
                                                         Ver detalles
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openEditModal(mobility)}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Edit2 className="mr-2 h-4 w-4" />
-                                                        Editar
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openDeleteModal(mobility)}
-                                                        className="cursor-pointer text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Eliminar
-                                                    </DropdownMenuItem>
+                                                    {userRole === 'admin' && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => openEditModal(mobility)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                <Edit2 className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => openDeleteModal(mobility)}
+                                                                className="cursor-pointer text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -339,20 +367,24 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                                                             <Eye className="mr-2 h-4 w-4" />
                                                             Ver detalles
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openEditModal(mobility)}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <Edit2 className="mr-2 h-4 w-4" />
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => openDeleteModal(mobility)}
-                                                            className="cursor-pointer text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Eliminar
-                                                        </DropdownMenuItem>
+                                                        {userRole === 'admin' && (
+                                                            <>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => openEditModal(mobility)}
+                                                                    className="cursor-pointer"
+                                                                >
+                                                                    <Edit2 className="mr-2 h-4 w-4" />
+                                                                    Editar
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => openDeleteModal(mobility)}
+                                                                    className="cursor-pointer text-destructive focus:text-destructive"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Eliminar
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -402,31 +434,47 @@ export default function GestionarMovilidad({ mobilities, filters, conductors }: 
                 </Card>
             </div>
 
-            {/* Botón flotante para móviles */}
-            <Button
-                onClick={openCreateModal}
-                className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden cursor-pointer bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90"
-                size="icon"
-            >
-                <Plus className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
-            </Button>
+            {/* Botones flotantes para móviles - Solo para administradores */}
+            {userRole === 'admin' && (
+                <div className="fixed bottom-6 right-6 flex flex-col gap-3 sm:hidden">
+                    <Button
+                        onClick={handleExportExcel}
+                        className="h-12 w-12 rounded-full shadow-lg cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+                        size="icon"
+                        title="Descargar Excel"
+                    >
+                        <Download className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        onClick={openCreateModal}
+                        className="h-14 w-14 rounded-full shadow-lg cursor-pointer bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90"
+                        size="icon"
+                    >
+                        <Plus className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
+                    </Button>
+                </div>
+            )}
 
-            {/* Modales */}
-            <MobilityModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                mobility={selectedMobility}
-                conductors={conductors}
-                title={getModalTitle()}
-            />
+            {/* Modales - Solo para administradores */}
+            {userRole === 'admin' && (
+                <>
+                    <MobilityModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        mobility={selectedMobility}
+                        conductors={conductors}
+                        title={getModalTitle()}
+                    />
 
-            <DeleteConfirmationModal
-                isOpen={deleteModal.isOpen}
-                onClose={closeDeleteModal}
-                onConfirm={handleDelete}
-                itemName={deleteModal.mobility?.name}
-                isDeleting={deleteModal.isDeleting}
-            />
+                    <DeleteConfirmationModal
+                        isOpen={deleteModal.isOpen}
+                        onClose={closeDeleteModal}
+                        onConfirm={handleDelete}
+                        itemName={deleteModal.mobility?.name}
+                        isDeleting={deleteModal.isDeleting}
+                    />
+                </>
+            )}
         </AppLayout>
     );
 }

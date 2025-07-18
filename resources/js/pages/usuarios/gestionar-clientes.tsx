@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type User } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, UserPlus, Edit2, Trash2, Search } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Edit2, Trash2, Search, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
@@ -141,6 +141,16 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
         setSearchQuery('');
     };
 
+    const handleExportExcel = () => {
+        try {
+            window.open(route('usuarios.clientes.export'), '_blank');
+            success('Descarga iniciada', 'El reporte Excel se está descargando...');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            error('Error de descarga', 'No se pudo descargar el reporte Excel.');
+        }
+    };
+
 
 
     const getModalTitle = () => {
@@ -161,7 +171,7 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                         />
                     </div>
 
-                    {/* Buscador y Botón Nuevo Usuario */}
+                    {/* Buscador y Botones */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex-1">
                             <SearchInput
@@ -171,10 +181,21 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                 onClear={clearSearch}
                             />
                         </div>
-                        <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            <span className="sm:inline">Nuevo Cliente</span>
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleExportExcel}
+                                variant="outline"
+                                className="hidden sm:flex cursor-pointer"
+                                title="Descargar reporte Excel"
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Excel
+                            </Button>
+                            <Button onClick={openCreateModal} className="hidden sm:flex w-full sm:w-auto cursor-pointer">
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                <span className="sm:inline">Nuevo Cliente</span>
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -345,14 +366,24 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                 </Card>
             </div>
 
-            {/* Botón flotante para móviles */}
-            <Button
-                onClick={openCreateModal}
-                className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg sm:hidden cursor-pointer bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90"
-                size="icon"
-            >
-                <UserPlus className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
-            </Button>
+            {/* Botones flotantes para móviles */}
+            <div className="fixed bottom-6 right-6 flex flex-col gap-3 sm:hidden">
+                <Button
+                    onClick={handleExportExcel}
+                    className="h-12 w-12 rounded-full shadow-lg cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+                    size="icon"
+                    title="Descargar Excel"
+                >
+                    <Download className="h-5 w-5" />
+                </Button>
+                <Button
+                    onClick={openCreateModal}
+                    className="h-14 w-14 rounded-full shadow-lg cursor-pointer bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90"
+                    size="icon"
+                >
+                    <UserPlus className="h-6 w-6 text-primary-foreground dark:text-primary-foreground" />
+                </Button>
+            </div>
 
             {/* Modales */}
             <UserModal

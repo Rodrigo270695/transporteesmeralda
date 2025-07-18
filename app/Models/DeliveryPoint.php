@@ -45,6 +45,8 @@ class DeliveryPoint extends Model
         'observation',
         'cancellation_reason',
         'customer_rating',
+        'customer_comment',
+        'rated_at',
 
         // Control de tiempos (SISTEMA/CONDUCTOR)
         'arrival_time',
@@ -63,6 +65,7 @@ class DeliveryPoint extends Model
         'arrival_time' => 'datetime',
         'departure_time' => 'datetime',
         'delivered_at' => 'datetime',
+        'rated_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

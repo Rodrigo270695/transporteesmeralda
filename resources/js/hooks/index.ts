@@ -7,3 +7,4 @@ export { useCamera } from './useCamera';
 export { useBackgroundSync } from './useBackgroundSync';
 export { useAdvancedGeolocation } from './useAdvancedGeolocation';
 export { usePushNotifications } from './usePushNotifications';
+export { useReactNativeApi } from './useReactNativeApi';

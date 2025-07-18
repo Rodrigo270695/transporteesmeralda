@@ -77,9 +77,10 @@ interface Mobility {
 
 interface Props {
     mobility: Mobility;
+    userRole: 'admin' | 'conductor';
 }
 
-export default function DetallesMovilidad({ mobility }: Props) {
+export default function DetallesMovilidad({ mobility, userRole }: Props) {
     // Estados para controlar qué modal está abierto
     const [activeModal, setActiveModal] = useState<string | null>(null);
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -417,37 +418,43 @@ export default function DetallesMovilidad({ mobility }: Props) {
                                                     </div>
                                                 )}
 
-                                                {/* Botón de editar */}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`cursor-pointer ${hasDigitalDocument(doc.data as DocumentWithDates) ? '' : 'flex-1'}`}
-                                                    onClick={() => handleEditDocument(doc.type, doc.data)}
-                                                >
-                                                    <Edit className="w-3 h-3 mr-1" />
-                                                    Editar
-                                                </Button>
+                                                {/* Botones de editar y eliminar - Solo para administradores */}
+                                                {userRole === 'admin' && (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className={`cursor-pointer ${hasDigitalDocument(doc.data as DocumentWithDates) ? '' : 'flex-1'}`}
+                                                            onClick={() => handleEditDocument(doc.type, doc.data)}
+                                                        >
+                                                            <Edit className="w-3 h-3 mr-1" />
+                                                            Editar
+                                                        </Button>
 
-                                                {/* Botón de eliminar */}
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="cursor-pointer"
-                                                    onClick={() => handleDeleteDocument(doc.type, doc.data?.id || 0)}
-                                                >
-                                                    <Trash className="w-3 h-3" />
-                                                </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            className="cursor-pointer"
+                                                            onClick={() => handleDeleteDocument(doc.type, doc.data?.id || 0)}
+                                                        >
+                                                            <Trash className="w-3 h-3" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </>
                                         ) : (
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                className="flex-1 cursor-pointer"
-                                                onClick={() => handleOpenModal(doc.type)}
-                                            >
-                                                <Plus className="w-3 h-3 mr-1" />
-                                                Registrar
-                                            </Button>
+                                            /* Botón de registrar - Solo para administradores */
+                                            userRole === 'admin' && (
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="flex-1 cursor-pointer"
+                                                    onClick={() => handleOpenModal(doc.type)}
+                                                >
+                                                    <Plus className="w-3 h-3 mr-1" />
+                                                    Registrar
+                                                </Button>
+                                            )
                                         )}
                                     </div>
                                 </CardContent>

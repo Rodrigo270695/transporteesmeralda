@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\ZoneController;
@@ -23,9 +24,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Rutas de Usuarios
     Route::prefix('usuarios')->name('usuarios.')->group(function () {
@@ -34,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('gestionar', [UserController::class, 'index'])->name('gestionar');
         Route::get('gestionar-clientes', [UserController::class, 'gestionarClientes'])->name('gestionar-clientes');
         Route::get('gestionar-conductores', [UserController::class, 'gestionarConductores'])->name('gestionar-conductores');
+        Route::get('clientes/export/excel', [UserController::class, 'exportClients'])->name('clientes.export');
         Route::post('/', [UserController::class, 'store'])->name('store');
         Route::get('{user}', [UserController::class, 'show'])->name('show');
         Route::put('{user}', [UserController::class, 'update'])->name('update');
@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('{mobility}/editar', [MobilityController::class, 'edit'])->name('editar');
         Route::put('{mobility}', [MobilityController::class, 'update'])->name('update');
         Route::delete('{mobility}', [MobilityController::class, 'destroy'])->name('destroy');
+        Route::get('export/excel', [MobilityController::class, 'export'])->name('export');
 
         // Rutas para documentos de movilidad
         Route::prefix('{mobility}')->group(function () {
@@ -203,6 +204,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Nuevas rutas para manejo directo de puntos desde dashboard
         Route::post('punto/{deliveryPoint}/iniciar', [DriverController::class, 'startPoint'])->name('punto.iniciar');
         Route::post('punto/{deliveryPoint}/completar', [DriverController::class, 'completePoint'])->name('punto.completar');
+        Route::post('punto/{deliveryPoint}/cambiar-estado', [DriverController::class, 'changePointStatus'])->name('punto.cambiar-estado');
 
         Route::post('imagenes', [DriverController::class, 'uploadImages'])->name('subir-imagenes');
         Route::post('ubicacion', [DriverController::class, 'updateLocation'])->name('actualizar-ubicacion');

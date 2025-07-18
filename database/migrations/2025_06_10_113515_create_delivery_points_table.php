@@ -60,6 +60,8 @@ return new class extends Migration
             $table->text('observation')->nullable();
             $table->text('cancellation_reason')->nullable();
             $table->tinyInteger('customer_rating')->nullable();
+            $table->text('customer_comment')->nullable();
+            $table->timestamp('rated_at')->nullable();
 
             // ═══════════════════════════════════════════════════════════
             // ⏰ CONTROL DE TIEMPOS (SISTEMA/CONDUCTOR ACTUALIZA)

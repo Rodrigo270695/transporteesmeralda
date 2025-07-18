@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiRequest, uploadFile } from '@/lib/config';
 
 interface BackgroundSyncOptions {
     syncInterval?: number;
@@ -247,41 +248,25 @@ export const useBackgroundSync = (options: BackgroundSyncOptions = {}): UseBackg
         }
     };
 
-    // Sincronizar datos de ubicación
+        // Sincronizar datos de ubicación
     const syncLocationData = async (item: SyncData): Promise<void> => {
-        const response = await fetch('/api/conductor/location', {
+        await apiRequest('/api/conductor/location', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
             body: JSON.stringify(item.data)
         });
-
-        if (!response.ok) {
-            throw new Error(`Error sincronizando ubicación: ${response.status}`);
-        }
     };
 
-    // Sincronizar datos de entrega
+        // Sincronizar datos de entrega
     const syncDeliveryData = async (item: SyncData): Promise<void> => {
         const { deliveryId, ...updateData } = item.data;
 
-        const response = await fetch(`/api/conductor/delivery/${deliveryId}/update`, {
+        await apiRequest(`/api/conductor/delivery/${deliveryId}/update`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
             body: JSON.stringify(updateData)
         });
-
-        if (!response.ok) {
-            throw new Error(`Error sincronizando entrega: ${response.status}`);
-        }
     };
 
-    // Sincronizar fotos
+        // Sincronizar fotos
     const syncPhotoData = async (item: SyncData): Promise<void> => {
         const formData = new FormData();
 
@@ -296,14 +281,7 @@ export const useBackgroundSync = (options: BackgroundSyncOptions = {}): UseBackg
         formData.append('type', item.data.type);
         formData.append('delivery_id', item.data.deliveryId);
 
-        const response = await fetch('/api/conductor/upload-image', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error sincronizando foto: ${response.status}`);
-        }
+        await uploadFile('/api/conductor/upload-image', formData);
     };
 
     // Limpiar cola

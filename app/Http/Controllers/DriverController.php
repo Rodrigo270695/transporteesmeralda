@@ -265,7 +265,7 @@ class DriverController extends Controller
     }
 
     /**
-     * Actualizar estado de un punto de entrega
+     * Actualizar estado de un punto de entrega - Versión simplificada
      */
     public function updatePoint(DeliveryPoint $deliveryPoint, DriverPointUpdateRequest $request): JsonResponse
     {
@@ -282,10 +282,14 @@ class DriverController extends Controller
 
             DB::beginTransaction();
 
-            $updateData = ['status' => $request->status];
+            // Obtener el estatus anterior
+            $previousStatus = $deliveryPoint->status;
+            $newStatus = $request->status;
+
+            $updateData = ['status' => $newStatus];
             $message = '';
 
-            switch ($request->status) {
+            switch ($newStatus) {
                 case 'en_ruta':
                     $updateData['arrival_time'] = now();
                     $message = 'Estado actualizado: En ruta al punto de entrega.';
@@ -325,6 +329,16 @@ class DriverController extends Controller
 
             $deliveryPoint->update($updateData);
 
+            // CREAR NOTIFICACIÓN SOLO SI CAMBIÓ EL ESTATUS
+            if ($previousStatus !== $newStatus) {
+                $this->createStatusChangeNotification($deliveryPoint, $previousStatus, $newStatus);
+            }
+
+            // Si el estatus cambió a "entregado", crear notificación para calificar
+            if ($newStatus === 'entregado' && $previousStatus !== 'entregado') {
+                $this->createRatingNotification($deliveryPoint);
+            }
+
             // Cargar relaciones actualizadas
             $deliveryPoint->load(['client', 'seller', 'mobility', 'paymentMethod']);
 
@@ -333,7 +347,14 @@ class DriverController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'data' => new DeliveryPointResource($deliveryPoint)
+                'data' => [
+                    'point_id' => $deliveryPoint->id,
+                    'status' => $deliveryPoint->status,
+                    'status_changed' => $previousStatus !== $newStatus,
+                    'previous_status' => $previousStatus,
+                    'new_status' => $newStatus,
+                    'updated_at' => $deliveryPoint->updated_at->format('Y-m-d H:i:s'),
+                ]
             ]);
 
         } catch (Exception $e) {
@@ -342,6 +363,55 @@ class DriverController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar el punto de entrega.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar estado de entrega
+     */
+    public function updateDeliveryStatus(Delivery $delivery, Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'status' => 'required|string|in:programada,en_progreso,completada,cancelada',
+            ]);
+
+            $user = Auth::user();
+
+            // Verificar que el conductor tiene puntos en esta entrega
+            $hasPoints = $delivery->deliveryPoints()
+                ->whereHas('mobility', function($query) use ($user) {
+                    $query->where('conductor_user_id', $user->id);
+                })
+                ->exists();
+
+            if (!$hasPoints) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para actualizar esta entrega.'
+                ], 403);
+            }
+
+            // Actualizar estado de la entrega
+            $delivery->update([
+                'status' => $request->status
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado de entrega actualizado correctamente.',
+                'data' => [
+                    'id' => $delivery->id,
+                    'status' => $delivery->status,
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el estado de la entrega.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -466,6 +536,14 @@ class DriverController extends Controller
     public function updateLocation(Request $request): JsonResponse
     {
         try {
+            // Debug: Log para verificar que llegamos aquí
+            Log::info('updateLocation called', [
+                'headers' => $request->headers->all(),
+                'data' => $request->all(),
+                'user_authenticated' => Auth::check(),
+                'user_id' => Auth::id()
+            ]);
+
             $request->validate([
                 'latitude' => 'required|numeric|between:-90,90',
                 'longitude' => 'required|numeric|between:-180,180',
@@ -473,12 +551,26 @@ class DriverController extends Controller
 
             $user = Auth::user();
 
-            // Actualizar ubicación del conductor (temporalmente comentado)
-            // $user->update([
-            //     'current_latitude' => $request->latitude,
-            //     'current_longitude' => $request->longitude,
-            //     'last_location_update' => now()
-            // ]);
+            if (!$user) {
+                Log::error('updateLocation: User not authenticated');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado.'
+                ], 401);
+            }
+
+            // Actualizar ubicación del conductor
+            $user->update([
+                'current_latitude' => $request->latitude,
+                'current_longitude' => $request->longitude,
+                'last_location_update' => now()
+            ]);
+
+            Log::info('Location updated successfully', [
+                'user_id' => $user->id,
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude
+            ]);
 
             // Aquí podrías agregar broadcast para tiempo real
             // broadcast(new DriverLocationUpdated($user, $request->latitude, $request->longitude));
@@ -489,6 +581,11 @@ class DriverController extends Controller
             ]);
 
         } catch (Exception $e) {
+            Log::error('updateLocation error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar la ubicación.',
@@ -629,26 +726,26 @@ class DriverController extends Controller
     /**
      * Marcar punto como "en ruta"
      */
-    public function startPoint(DeliveryPoint $deliveryPoint): JsonResponse
+    public function startPoint(DeliveryPoint $deliveryPoint)
     {
         try {
             $user = Auth::user();
 
             // Verificar que el punto pertenece al conductor
             if ($deliveryPoint->mobility->conductor_user_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permisos para actualizar este punto.'
-                ], 403);
+                return back()->withErrors(['error' => 'No tienes permisos para actualizar este punto.']);
             }
 
             // Verificar que el punto esté en estado pendiente
             if (!in_array($deliveryPoint->status, ['pendiente', 'reagendado'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo se pueden iniciar puntos pendientes o reagendados.'
-                ], 400);
+                return back()->withErrors(['error' => 'Solo se pueden iniciar puntos pendientes o reagendados.']);
             }
+
+            // Obtener el estatus anterior
+            $previousStatus = $deliveryPoint->status;
+
+            // Cargar relaciones necesarias para notificaciones
+            $deliveryPoint->load(['mobility.conductor']);
 
             // Actualizar estado
             $deliveryPoint->update([
@@ -656,49 +753,33 @@ class DriverController extends Controller
                 'arrival_time' => now(),
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Punto marcado como en ruta exitosamente.',
-                'data' => [
-                    'id' => $deliveryPoint->id,
-                    'status' => $deliveryPoint->status,
-                    'status_label' => $this->getStatusLabel($deliveryPoint->status),
-                    'arrival_time' => $deliveryPoint->arrival_time,
-                ]
-            ]);
+            // CREAR NOTIFICACIÓN DE CAMBIO DE ESTATUS
+            $this->createStatusChangeNotification($deliveryPoint, $previousStatus, 'en_ruta');
+
+            return back()->with('success', 'Punto marcado como en ruta exitosamente.');
 
         } catch (Exception $e) {
             Log::error('Error al iniciar punto: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor.',
-                'error' => $e->getMessage()
-            ], 500);
+            return back()->withErrors(['error' => 'Error interno del servidor.']);
         }
     }
 
     /**
      * Completar punto de entrega con información mínima
      */
-    public function completePoint(DeliveryPoint $deliveryPoint, Request $request): JsonResponse
+    public function completePoint(DeliveryPoint $deliveryPoint, Request $request)
     {
         try {
             $user = Auth::user();
 
             // Verificar que el punto pertenece al conductor
             if ($deliveryPoint->mobility->conductor_user_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permisos para actualizar este punto.'
-                ], 403);
+                return back()->withErrors(['error' => 'No tienes permisos para actualizar este punto.']);
             }
 
             // Verificar que el punto esté en ruta
             if ($deliveryPoint->status !== 'en_ruta') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo se pueden completar puntos que estén en ruta.'
-                ], 400);
+                return back()->withErrors(['error' => 'Solo se pueden completar puntos que estén en ruta.']);
             }
 
             // Validar datos requeridos
@@ -727,6 +808,12 @@ class DriverController extends Controller
                 );
             }
 
+            // Obtener el estatus anterior
+            $previousStatus = $deliveryPoint->status;
+
+            // Cargar relaciones necesarias para notificaciones
+            $deliveryPoint->load(['mobility.conductor']);
+
             // Actualizar el punto
             $deliveryPoint->update([
                 'status' => 'entregado',
@@ -741,25 +828,108 @@ class DriverController extends Controller
                 'departure_time' => now(),
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Punto completado exitosamente.',
-                'data' => [
-                    'id' => $deliveryPoint->id,
-                    'status' => $deliveryPoint->status,
-                    'status_label' => $this->getStatusLabel($deliveryPoint->status),
-                    'amount_collected' => $deliveryPoint->amount_collected,
-                    'delivered_at' => $deliveryPoint->delivered_at,
-                ]
-            ]);
+            // CREAR NOTIFICACIONES
+            // 1. Notificación de cambio de estatus a "entregado"
+            $this->createStatusChangeNotification($deliveryPoint, $previousStatus, 'entregado');
+
+            // 2. Notificación para calificar el servicio
+            $this->createRatingNotification($deliveryPoint);
+
+            return back()->with('success', 'Punto completado exitosamente.');
 
         } catch (Exception $e) {
             Log::error('Error al completar punto: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor.',
-                'error' => $e->getMessage()
-            ], 500);
+            return back()->withErrors(['error' => 'Error interno del servidor.']);
+        }
+    }
+
+    /**
+     * Método para crear notificación de cambio de estatus
+     */
+    private function createStatusChangeNotification($deliveryPoint, $previousStatus, $newStatus)
+    {
+        try {
+            \App\Models\Notification::createStatusChangeNotification($deliveryPoint, $previousStatus, $newStatus);
+            Log::info("Notificación de cambio de estatus creada: {$previousStatus} -> {$newStatus} para punto {$deliveryPoint->id}");
+        } catch (\Exception $e) {
+            Log::error("Error creando notificación de cambio de estatus: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Método para crear notificación de calificación
+     */
+    private function createRatingNotification($deliveryPoint)
+    {
+        try {
+            \App\Models\Notification::createRatingNotification($deliveryPoint);
+            Log::info("Notificación de calificación creada para punto {$deliveryPoint->id}");
+        } catch (\Exception $e) {
+            Log::error("Error creando notificación de calificación: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cambiar estado de un punto de entrega (cancelar o reagendar)
+     */
+    public function changePointStatus(Request $request, DeliveryPoint $deliveryPoint)
+    {
+        try {
+            $validated = $request->validate([
+                'status' => 'required|in:cancelado,reagendado',
+                'observations' => 'required|string|max:500',
+                'rescheduled_date' => 'nullable|date|after:today'
+            ]);
+
+            $user = Auth::user();
+            $previousStatus = $deliveryPoint->status;
+
+            // Verificar que el punto pertenece al conductor
+            if ($deliveryPoint->mobility->conductor_user_id !== $user->id) {
+                return back()->withErrors(['error' => 'No tienes permisos para modificar este punto de entrega.']);
+            }
+
+            // Verificar que el punto esté en estado válido para cambio
+            if (!in_array($deliveryPoint->status, ['pendiente', 'en_ruta'])) {
+                return back()->withErrors(['error' => 'Solo se pueden cancelar o reagendar puntos pendientes o en ruta.']);
+            }
+
+            DB::transaction(function () use ($deliveryPoint, $validated, $previousStatus) {
+                // Preparar el motivo de cancelación/reagendado
+                $cancellationReason = $validated['observations'];
+
+                // Si es reagendado y tiene fecha, combinar observaciones con fecha
+                if ($validated['status'] === 'reagendado' && !empty($validated['rescheduled_date'])) {
+                    $formattedDate = \Carbon\Carbon::parse($validated['rescheduled_date'])->format('d/m/Y');
+                    $cancellationReason = $validated['observations'] . " - Nueva fecha: " . $formattedDate;
+                }
+
+                // Actualizar el punto
+                $updateData = [
+                    'status' => $validated['status'],
+                    'cancellation_reason' => $cancellationReason,
+                    'updated_at' => now(),
+                ];
+
+                if ($validated['status'] === 'reagendado' && !empty($validated['rescheduled_date'])) {
+                    $updateData['rescheduled_date'] = $validated['rescheduled_date'];
+                }
+
+                $deliveryPoint->update($updateData);
+
+                // CREAR NOTIFICACIÓN de cambio de estatus
+                $this->createStatusChangeNotification($deliveryPoint, $previousStatus, $validated['status']);
+            });
+
+            $statusLabel = $validated['status'] === 'cancelado' ? 'cancelado' : 'reagendado';
+
+            return back()->with('success', "Punto {$statusLabel} exitosamente.");
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        } catch (Exception $e) {
+            Log::error('Error al cambiar estado del punto: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error interno del servidor.']);
         }
     }
 }

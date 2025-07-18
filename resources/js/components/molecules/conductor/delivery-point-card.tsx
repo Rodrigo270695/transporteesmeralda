@@ -2,6 +2,12 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DriverDeliveryPoint } from '@/types/driver';
 import {
     Navigation,
@@ -10,7 +16,10 @@ import {
     MapPin,
     Clock,
     DollarSign,
-    MessageCircle
+    MessageCircle,
+    MoreVertical,
+    XCircle,
+    RotateCcw
 } from 'lucide-react';
 
 interface DeliveryPointCardProps {
@@ -165,6 +174,35 @@ const DeliveryPointCard: React.FC<DeliveryPointCardProps> = ({
                             >
                                 <MapPin className="h-3 w-3" />
                             </Button>
+                            {/* Menú para cambiar estado */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        title="Cambiar estado"
+                                    >
+                                        <MoreVertical className="h-3 w-3" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem
+                                        onClick={() => onAction('cancel', point)}
+                                        className="text-red-600 cursor-pointer"
+                                    >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Cancelar entrega
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => onAction('reschedule', point)}
+                                        className="text-purple-600 cursor-pointer"
+                                    >
+                                        <RotateCcw className="h-4 w-4 mr-2" />
+                                        Reagendar entrega
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </>
                     )}
 
@@ -206,6 +244,35 @@ const DeliveryPointCard: React.FC<DeliveryPointCardProps> = ({
                             >
                                 <MapPin className="h-3 w-3" />
                             </Button>
+                            {/* Menú para cambiar estado */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        title="Cambiar estado"
+                                    >
+                                        <MoreVertical className="h-3 w-3" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem
+                                        onClick={() => onAction('cancel', point)}
+                                        className="text-red-600 cursor-pointer"
+                                    >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Cancelar entrega
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => onAction('reschedule', point)}
+                                        className="text-purple-600 cursor-pointer"
+                                    >
+                                        <RotateCcw className="h-4 w-4 mr-2" />
+                                        Reagendar entrega
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </>
                     )}
 

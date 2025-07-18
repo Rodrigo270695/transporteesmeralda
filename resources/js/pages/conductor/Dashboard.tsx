@@ -17,7 +17,7 @@ import {
     Phone,
     ChevronDown
 } from 'lucide-react';
-import { MapView } from '@/components/organisms/conductor';
+import { MapView, StatusChangeModal } from '@/components/organisms/conductor';
 import {
     useAdvancedGeolocation,
     useBackgroundSync
@@ -37,6 +37,8 @@ export default function Dashboard({
     // Estados
     const [selectedPoint, setSelectedPoint] = useState<DriverDeliveryPoint | null>(null);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState<'cancelado' | 'reagendado' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     // PWA Hooks
@@ -86,26 +88,39 @@ export default function Dashboard({
         try {
             switch (action) {
                 case 'start':
-                    const startResponse = await fetch(route('conductor.punto.iniciar', point.id), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    router.post(route('conductor.punto.iniciar', point.id), {}, {
+                        preserveScroll: true,
+                        preserveState: true,
+                        only: ['deliveryPoints', 'stats'],
+                        onSuccess: () => {
+                            success('¡Punto iniciado!', 'Has marcado el punto como en ruta.');
                         },
+                        onError: (errors) => {
+                            console.error('Errores:', errors);
+                            const errorMessage = Object.values(errors)[0] as string || 'No se pudo iniciar el punto.';
+                            error('Error', errorMessage);
+                        },
+                        onFinish: () => {
+                            setIsLoading(false);
+                        }
                     });
-
-                    if (startResponse.ok) {
-                        success('¡Punto iniciado!', 'Has marcado el punto como en ruta.');
-                        router.reload({ only: ['deliveryPoints', 'stats'] });
-                    } else {
-                        const errorData = await startResponse.json();
-                        error('Error', errorData.message || 'No se pudo iniciar el punto.');
-                    }
-                    break;
+                    return; // Salir temprano para evitar setIsLoading(false) al final
 
                 case 'complete':
                     setSelectedPoint(point);
                     setShowCompletionModal(true);
+                    break;
+
+                case 'cancel':
+                    setSelectedPoint(point);
+                    setSelectedStatus('cancelado');
+                    setShowStatusChangeModal(true);
+                    break;
+
+                case 'reschedule':
+                    setSelectedPoint(point);
+                    setSelectedStatus('reagendado');
+                    setShowStatusChangeModal(true);
                     break;
 
                 case 'call':
@@ -134,31 +149,51 @@ export default function Dashboard({
 
         setIsLoading(true);
 
-        try {
-            const response = await fetch(route('conductor.punto.completar', selectedPoint.id), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
+        router.post(route('conductor.punto.completar', selectedPoint.id), data, {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['deliveryPoints', 'stats'],
+            onSuccess: () => {
                 setShowCompletionModal(false);
                 setSelectedPoint(null);
                 success('¡Punto completado!', 'El punto se ha marcado como entregado exitosamente.');
-                router.reload({ only: ['deliveryPoints', 'stats'] });
-            } else {
-                const errorData = await response.json();
-                error('Error', errorData.message || 'No se pudo completar el punto.');
+            },
+            onError: (errors) => {
+                console.error('Errores:', errors);
+                const errorMessage = Object.values(errors)[0] as string || 'No se pudo completar el punto.';
+                error('Error', errorMessage);
+            },
+            onFinish: () => {
+                setIsLoading(false);
             }
-        } catch (err) {
-            console.error('Error completando punto:', err);
-            error('Error', 'Ocurrió un error inesperado. Inténtalo nuevamente.');
-        } finally {
-            setIsLoading(false);
-        }
+        });
+    };
+
+    const handleStatusChangeSubmit = async (data: { status: string; observations: string; rescheduled_date?: string }) => {
+        if (!selectedPoint) return;
+
+        setIsLoading(true);
+
+        router.post(route('conductor.punto.cambiar-estado', selectedPoint.id), data, {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['deliveryPoints', 'stats'],
+            onSuccess: () => {
+                setShowStatusChangeModal(false);
+                setSelectedPoint(null);
+                setSelectedStatus(null);
+                const statusLabel = data.status === 'cancelado' ? 'cancelado' : 'reagendado';
+                success(`¡Punto ${statusLabel}!`, `El punto se ha marcado como ${statusLabel} exitosamente.`);
+            },
+            onError: (errors) => {
+                console.error('Errores:', errors);
+                const errorMessage = Object.values(errors)[0] as string || 'No se pudo cambiar el estado del punto.';
+                error('Error', errorMessage);
+            },
+            onFinish: () => {
+                setIsLoading(false);
+            }
+        });
     };
 
     return (
@@ -202,6 +237,22 @@ export default function Dashboard({
                                         GPS {isTracking ? 'Activo' : 'Inactivo'}
                                     </span>
                                 </div>
+                                {isSyncing && (
+                                    <div className="flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                                        <span className="text-sm text-blue-600">
+                                            Sincronizando...
+                                        </span>
+                                    </div>
+                                )}
+                                {pendingItems > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-orange-500"></div>
+                                        <span className="text-sm text-orange-600">
+                                            {pendingItems} pendiente{pendingItems > 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                )}
                                 <Button
                                     onClick={() => router.reload()}
                                     variant="outline"
@@ -282,9 +333,25 @@ export default function Dashboard({
                                     Mapa de Rutas
                                 </h2>
                                 <Button
-                                    onClick={() => isTracking ? stopTracking() : startTracking()}
+                                    onClick={async () => {
+                                        if (isTracking) {
+                                            stopTracking();
+                                            success('GPS detenido', 'El seguimiento GPS ha sido detenido correctamente.');
+                                        } else {
+                                            try {
+                                                await startTracking();
+                                                success('GPS iniciado', 'El seguimiento GPS ha sido iniciado correctamente.');
+                                            } catch (gpsError) {
+                                                console.error('Error GPS:', gpsError);
+                                                error('Permisos de GPS',
+                                                    'Para usar el GPS, haz clic en el ícono de ubicación 📍 en la barra del navegador y selecciona "Permitir". Si el problema persiste, verifica que el GPS esté activado en tu dispositivo.'
+                                                );
+                                            }
+                                        }
+                                    }}
                                     size="sm"
                                     variant={isTracking ? "destructive" : "default"}
+                                    disabled={!location && isTracking}
                                 >
                                     {isTracking ? 'Detener' : 'Iniciar'} GPS
                                 </Button>
@@ -420,6 +487,20 @@ export default function Dashboard({
                 onSubmit={handleCompleteSubmit}
                 isLoading={isLoading}
                 captureImage={driverHook.captureImage}
+            />
+
+            {/* Modal de cambio de estado */}
+            <StatusChangeModal
+                point={selectedPoint}
+                isOpen={showStatusChangeModal}
+                selectedStatus={selectedStatus}
+                onClose={() => {
+                    setShowStatusChangeModal(false);
+                    setSelectedPoint(null);
+                    setSelectedStatus(null);
+                }}
+                onSubmit={handleStatusChangeSubmit}
+                isLoading={isLoading}
             />
         </AppLayout>
     );

@@ -10,7 +10,7 @@ interface AdvancedGeolocationOptions {
     autoSync?: boolean;
     syncInterval?: number;
     batteryOptimization?: boolean;
-    geofenceRadius?: number; // metros
+    geofenceRadius?: number;
 }
 
 interface GeofenceZone {
@@ -18,7 +18,7 @@ interface GeofenceZone {
     name: string;
     latitude: number;
     longitude: number;
-    radius: number; // metros
+    radius: number;
     type: 'delivery' | 'depot' | 'restricted';
 }
 
@@ -33,7 +33,7 @@ interface UseAdvancedGeolocationReturn {
     battery: BatteryManager | null;
     isInGeofence: boolean;
     currentGeofence: GeofenceZone | null;
-    startTracking: () => void;
+    startTracking: () => Promise<void>;
     stopTracking: () => void;
     getCurrentLocation: () => Promise<DriverLocation>;
     requestLocationPermission: () => Promise<boolean>;
@@ -53,13 +53,13 @@ export const useAdvancedGeolocation = (
 ): UseAdvancedGeolocationReturn => {
     const {
         enableHighAccuracy = true,
-        timeout = 15000,
-        maximumAge = 10000,
-        trackingInterval = 10000, // 10 segundos
+        timeout = 30000, // Aumentado a 30 segundos
+        maximumAge = 60000, // Aumentado a 60 segundos
+        trackingInterval = 30000, // Aumentado a 30 segundos
         autoSync = true,
-        syncInterval = 30000, // 30 segundos
+        syncInterval = 60000, // Aumentado a 60 segundos
         batteryOptimization = true,
-        geofenceRadius = 100 // 100 metros
+        geofenceRadius = 100
     } = options;
 
     // Estados
@@ -76,10 +76,10 @@ export const useAdvancedGeolocation = (
 
     // Referencias
     const watchIdRef = useRef<number | null>(null);
-    const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const geofencesRef = useRef<GeofenceZone[]>([]);
     const lastLocationRef = useRef<DriverLocation | null>(null);
     const batteryLevelRef = useRef<number>(1);
+    const permissionDeniedRef = useRef<boolean>(false);
 
     // Background sync
     const {
@@ -103,10 +103,8 @@ export const useAdvancedGeolocation = (
                     setBattery(batteryManager);
                     batteryLevelRef.current = batteryManager.level;
 
-                    // Escuchar cambios de batería
                     batteryManager.addEventListener('levelchange', () => {
                         batteryLevelRef.current = batteryManager.level;
-                        optimizeTrackingForBattery();
                     });
                 } catch (error) {
                     console.warn('Battery API no disponible');
@@ -117,33 +115,16 @@ export const useAdvancedGeolocation = (
         initBattery();
     }, []);
 
-    // Optimizar tracking según batería
-    const optimizeTrackingForBattery = useCallback(() => {
-        if (!batteryOptimization || !isTracking) return;
-
-        const batteryLevel = batteryLevelRef.current;
-
-        // Ajustar frecuencia según nivel de batería
-        let newInterval = trackingInterval;
-
-        if (batteryLevel < 0.2) { // < 20%
-            newInterval = trackingInterval * 3; // Reducir frecuencia 3x
-        } else if (batteryLevel < 0.5) { // < 50%
-            newInterval = trackingInterval * 2; // Reducir frecuencia 2x
-        }
-
-        // Reiniciar tracking con nueva frecuencia
-        if (trackingIntervalRef.current) {
-            clearInterval(trackingIntervalRef.current);
-            startPeriodicTracking(newInterval);
-        }
-    }, [batteryOptimization, isTracking, trackingInterval]);
-
     // Obtener ubicación actual
     const getCurrentLocation = useCallback((): Promise<DriverLocation> => {
         return new Promise((resolve, reject) => {
             if (!isSupported) {
                 reject(new Error('Geolocalización no soportada'));
+                return;
+            }
+
+            if (permissionDeniedRef.current) {
+                reject(new Error('Permisos de ubicación denegados'));
                 return;
             }
 
@@ -172,13 +153,11 @@ export const useAdvancedGeolocation = (
                     setSpeed(position.coords.speed || null);
                     setHeading(position.coords.heading || null);
                     setIsLoading(false);
+                    setError(null);
 
                     lastLocationRef.current = newLocation;
-
-                    // Verificar geofences
                     checkGeofences(newLocation);
 
-                    // Agregar a cola de sincronización si autoSync está habilitado
                     if (autoSync) {
                         addToQueue({
                             type: 'location',
@@ -200,7 +179,8 @@ export const useAdvancedGeolocation = (
 
                     switch (error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMessage = 'Permiso de ubicación denegado';
+                            errorMessage = 'Permisos de GPS denegados';
+                            permissionDeniedRef.current = true;
                             break;
                         case error.POSITION_UNAVAILABLE:
                             errorMessage = 'Ubicación no disponible';
@@ -208,23 +188,23 @@ export const useAdvancedGeolocation = (
                         case error.TIMEOUT:
                             errorMessage = 'Tiempo de espera agotado';
                             break;
+                        default:
+                            errorMessage = `Error de geolocalización: ${error.message}`;
                     }
 
                     setError(errorMessage);
                     setIsLoading(false);
+
+                    // Si hay error de permisos, detener tracking
+                    if (error.code === error.PERMISSION_DENIED) {
+                        stopTracking();
+                    }
+
                     reject(new Error(errorMessage));
-                },
-                options
+                }
             );
         });
     }, [isSupported, enableHighAccuracy, timeout, maximumAge, autoSync, addToQueue]);
-
-    // Iniciar tracking periódico
-    const startPeriodicTracking = useCallback((interval: number = trackingInterval) => {
-        trackingIntervalRef.current = setInterval(() => {
-            getCurrentLocation().catch(console.error);
-        }, interval);
-    }, [getCurrentLocation, trackingInterval]);
 
     // Solicitar permisos de geolocalización
     const requestLocationPermission = useCallback(async (): Promise<boolean> => {
@@ -233,13 +213,18 @@ export const useAdvancedGeolocation = (
             return false;
         }
 
+        // Reset permission denied flag
+        permissionDeniedRef.current = false;
+
         try {
             // Verificar permisos usando Permissions API si está disponible
             if ('permissions' in navigator) {
                 const permission = await navigator.permissions.query({ name: 'geolocation' });
 
                 if (permission.state === 'denied') {
-                    setError('Los permisos de ubicación han sido denegados. Por favor, habilítalos en la configuración del navegador.');
+                    const errorMessage = 'Los permisos de ubicación han sido denegados. Por favor, habilítalos en la configuración del navegador.';
+                    setError(errorMessage);
+                    permissionDeniedRef.current = true;
                     return false;
                 }
 
@@ -249,42 +234,23 @@ export const useAdvancedGeolocation = (
             }
 
             // Intentar obtener ubicación para solicitar permisos
-            return new Promise((resolve) => {
-                navigator.geolocation.getCurrentPosition(
-                    () => {
-                        setError(null);
-                        resolve(true);
-                    },
-                    (error) => {
-                        let errorMessage = 'Error al solicitar permisos de ubicación';
-
-                        switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = 'Permisos de ubicación denegados. Para usar el seguimiento GPS, por favor:\n\n1. Haz clic en el ícono de ubicación en la barra de direcciones\n2. Selecciona "Permitir" para este sitio\n3. Recarga la página e intenta nuevamente';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = 'Ubicación no disponible. Verifica que el GPS esté activado.';
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = 'Tiempo de espera agotado. Intenta nuevamente.';
-                                break;
-                        }
-
-                        setError(errorMessage);
-                        resolve(false);
-                    },
-                    {
-                        enableHighAccuracy: false,
-                        timeout: 10000,
-                        maximumAge: 60000
-                    }
-                );
-            });
+            try {
+                await getCurrentLocation();
+                setError(null);
+                return true;
+            } catch (error: any) {
+                if (error.message.includes('denegados')) {
+                    const errorMessage = 'Para usar el GPS, haz clic en el ícono de ubicación 📍 en la barra de direcciones y selecciona "Permitir"';
+                    setError(errorMessage);
+                    permissionDeniedRef.current = true;
+                }
+                return false;
+            }
         } catch (error) {
             setError('Error al verificar permisos de ubicación');
             return false;
         }
-    }, [isSupported]);
+    }, [isSupported, getCurrentLocation]);
 
     // Iniciar tracking
     const startTracking = useCallback(async () => {
@@ -292,19 +258,25 @@ export const useAdvancedGeolocation = (
 
         // Solicitar permisos primero
         const hasPermission = await requestLocationPermission();
-        if (!hasPermission) return;
+        if (!hasPermission) {
+            throw new Error('No se pudieron obtener los permisos de ubicación');
+        }
 
         setIsTracking(true);
         setError(null);
 
         // Obtener ubicación inicial
-        getCurrentLocation();
+        try {
+            await getCurrentLocation();
+        } catch (error) {
+            console.error('Error obteniendo ubicación inicial:', error);
+        }
 
-        // Usar watchPosition para tracking continuo
+        // Usar solo watchPosition para tracking continuo
         const watchOptions: PositionOptions = {
             enableHighAccuracy,
-            timeout: timeout / 2, // Timeout más corto para watch
-            maximumAge: maximumAge / 2
+            timeout: Math.min(timeout, 20000), // Máximo 20 segundos
+            maximumAge: maximumAge
         };
 
         watchIdRef.current = navigator.geolocation.watchPosition(
@@ -324,6 +296,7 @@ export const useAdvancedGeolocation = (
                     setAccuracy(position.coords.accuracy);
                     setSpeed(position.coords.speed || null);
                     setHeading(position.coords.heading || null);
+                    setError(null);
 
                     lastLocationRef.current = newLocation;
                     checkGeofences(newLocation);
@@ -345,23 +318,38 @@ export const useAdvancedGeolocation = (
             },
             (error) => {
                 console.error('Error en watchPosition:', error);
-                // No detener el tracking por errores esporádicos
+
+                let errorMessage = '';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Permisos de ubicación denegados';
+                        permissionDeniedRef.current = true;
+                        stopTracking(); // Detener tracking si se deniegan permisos
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Ubicación no disponible';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Tiempo de espera agotado para obtener ubicación';
+                        break;
+                    default:
+                        errorMessage = 'Error de geolocalización';
+                }
+
+                setError(errorMessage);
             },
             watchOptions
         );
-
-        // Backup con tracking periódico
-        startPeriodicTracking();
     }, [
         isSupported,
         isTracking,
+        requestLocationPermission,
         getCurrentLocation,
         enableHighAccuracy,
         timeout,
         maximumAge,
         autoSync,
-        addToQueue,
-        startPeriodicTracking
+        addToQueue
     ]);
 
     // Detener tracking
@@ -373,10 +361,7 @@ export const useAdvancedGeolocation = (
             watchIdRef.current = null;
         }
 
-        if (trackingIntervalRef.current !== null) {
-            clearInterval(trackingIntervalRef.current);
-            trackingIntervalRef.current = null;
-        }
+        setError(null);
     }, []);
 
     // Verificar si debe actualizar ubicación
@@ -421,12 +406,10 @@ export const useAdvancedGeolocation = (
             }
         }
 
-        // Disparar eventos si cambió el estado
         if (insideGeofence !== isInGeofence) {
             setIsInGeofence(insideGeofence);
             setCurrentGeofence(activeGeofence);
 
-            // Enviar evento personalizado
             window.dispatchEvent(new CustomEvent('geofenceChange', {
                 detail: {
                     isInside: insideGeofence,
@@ -450,7 +433,6 @@ export const useAdvancedGeolocation = (
     // Calcular distancia a un punto
     const getDistanceToPoint = useCallback((lat: number, lng: number): number | null => {
         if (!location) return null;
-
         return calculateDistance(location.latitude, location.longitude, lat, lng);
     }, [location]);
 

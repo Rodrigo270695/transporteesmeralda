@@ -6,8 +6,10 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\Driver;
+use App\Exports\ClientsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
 
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -307,5 +309,20 @@ class UserController extends Controller
             'roles' => $roles,
             'filters' => $request->only(['search']),
         ]);
+    }
+
+    /**
+     * Export clients to Excel
+     */
+    public function exportClients()
+    {
+        try {
+            $fileName = 'reporte_clientes_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return Excel::download(new ClientsExport, $fileName);
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Error al generar el reporte Excel. Inténtalo nuevamente.');
+        }
     }
 }

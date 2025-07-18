@@ -46,13 +46,14 @@
         <link rel="manifest" href="/manifest.json">
 
         {{-- Icons --}}
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/logo.png" sizes="any">
+        <link rel="icon" href="/icons/icon-96x96.png" sizes="96x96" type="image/png">
+        <link rel="icon" href="/icons/icon-192x192.png" sizes="192x192" type="image/png">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.svg">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
 
         {{-- iOS Splash Screens --}}
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.svg">
+        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
 
         {{-- Microsoft --}}
         <meta name="msapplication-TileColor" content="#059669">

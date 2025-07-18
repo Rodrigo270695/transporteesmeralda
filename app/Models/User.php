@@ -26,6 +26,9 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
+        'current_latitude',
+        'current_longitude',
+        'last_location_update',
     ];
 
     /**
@@ -48,6 +51,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'current_latitude' => 'decimal:8',
+            'current_longitude' => 'decimal:8',
+            'last_location_update' => 'datetime',
         ];
     }
 
@@ -117,6 +123,14 @@ class User extends Authenticatable
     public function mobilities()
     {
         return $this->hasMany(Mobility::class, 'conductor_user_id');
+    }
+
+    /**
+     * Relación con notificaciones del usuario
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 
     // ═══════════════════════════════════════════════════════════
