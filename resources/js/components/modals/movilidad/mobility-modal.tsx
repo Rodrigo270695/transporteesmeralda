@@ -159,9 +159,9 @@ export default function MobilityModal({
                             </SelectTrigger>
                             <SelectContent>
                                 {conductors.length === 0 ? (
-                                    <SelectItem value="" disabled>
+                                    <div className="py-2 px-3 text-sm text-muted-foreground">
                                         No hay conductores disponibles
-                                    </SelectItem>
+                                    </div>
                                 ) : (
                                     conductors.map((conductor) => (
                                         <SelectItem
