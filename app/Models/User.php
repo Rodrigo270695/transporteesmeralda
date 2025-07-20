@@ -26,6 +26,8 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
+        'address',
+        'zone_id',
         'current_latitude',
         'current_longitude',
         'last_location_update',
@@ -87,6 +89,14 @@ class User extends Authenticatable
     public function driver()
     {
         return $this->hasOne(Driver::class);
+    }
+
+    /**
+     * Get the zone associated with the user.
+     */
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
     }
 
     // ═══════════════════════════════════════════════════════════

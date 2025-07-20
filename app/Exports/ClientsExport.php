@@ -19,7 +19,7 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
     public function collection()
     {
         return User::role('cliente')
-            ->with(['roles'])
+            ->with(['roles', 'zone'])
             ->select([
                 'id',
                 'first_name',
@@ -27,6 +27,8 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
                 'dni',
                 'phone',
                 'email',
+                'address',
+                'zone_id',
                 'current_latitude',
                 'current_longitude',
                 'last_location_update',
@@ -49,6 +51,8 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $client->dni ?? 'N/A',
             $client->phone ?? 'N/A',
             $client->email ?? 'N/A',
+            $client->address ?? 'N/A',
+            $client->zone ? $client->zone->name : 'N/A',
 
             // Ubicación
             $client->current_latitude ? 'Sí' : 'No',
@@ -82,6 +86,8 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             'DNI',
             'Teléfono',
             'Correo Electrónico',
+            'Dirección',
+            'Zona',
 
             'Tiene Ubicación GPS',
             'Latitud',

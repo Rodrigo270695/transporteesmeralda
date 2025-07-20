@@ -5,12 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import InputError from '@/components/molecules/input-error';
 import { type User } from '@/types';
 import { useForm } from '@inertiajs/react';
-import { User as UserIcon, Mail, Phone, IdCard, Lock, Eye, EyeOff, CreditCard } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, IdCard, Lock, Eye, EyeOff, CreditCard, MapPin, Map } from 'lucide-react';
 import { useState } from 'react';
 
 interface UserFormProps {
     user?: User & { driver?: any };
     roles?: Array<{ id: number; name: string }>;
+    zones?: Array<{ id: number; name: string }>;
     onSubmit?: (data: any) => void;
     onSuccess?: (message: string) => void;
     onError?: (message: string) => void;
@@ -22,6 +23,7 @@ interface UserFormProps {
 export function UserForm({
     user,
     roles = [],
+    zones = [],
     onSubmit,
     onSuccess,
     onError,
@@ -35,6 +37,8 @@ export function UserForm({
         dni: user?.dni || '',
         phone: user?.phone || '',
         email: user?.email || '',
+        address: user?.address || '',
+        zone_id: user?.zone_id || '',
         password: '',
         role: user?.roles?.[0]?.name || defaultRole,
         license_number: user?.driver?.license_number || '',
@@ -217,6 +221,51 @@ export function UserForm({
                     )}
                 </div>
             </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                    <Label htmlFor="zone_id">Zona *</Label>
+                    <Select value={data.zone_id ? data.zone_id.toString() : ""} onValueChange={(value) => setData('zone_id', value)}>
+                        <SelectTrigger className="cursor-pointer">
+                            <SelectValue placeholder={zones.length > 0 ? "Selecciona una zona" : "No hay zonas disponibles"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {zones.length > 0 ? (
+                                zones.map((zone) => (
+                                    <SelectItem key={zone.id} value={zone.id.toString()} className="cursor-pointer">
+                                        {zone.name}
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <SelectItem value="no-zones" disabled className="cursor-pointer text-muted-foreground">
+                                    No hay zonas registradas
+                                </SelectItem>
+                            )}
+                        </SelectContent>
+                    </Select>
+                    {errors.zone_id && (
+                        <InputError message={errors.zone_id} />
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="password">
+                        {user ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
+                    </Label>
+                    <SimpleInput
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        icon={Lock}
+                        value={data.password}
+                        onChange={(value) => setData('password', value)}
+                        required={!user}
+                        placeholder={user ? "Dejar vacío para mantener actual" : "Ingresa la contraseña"}
+                        rightElement={passwordToggle}
+                    />
+                    {errors.password && (
+                        <InputError message={errors.password} />
+                    )}
+                </div>
+            </div>
 
             <div className="space-y-2">
                 <Label htmlFor="email">Correo Electrónico</Label>
@@ -234,21 +283,18 @@ export function UserForm({
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="password">
-                    {user ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}
-                </Label>
+                <Label htmlFor="address">Dirección</Label>
                 <SimpleInput
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    icon={Lock}
-                    value={data.password}
-                    onChange={(value) => setData('password', value)}
-                    required={!user}
-                    placeholder={user ? "Dejar vacío para mantener actual" : "Ingresa la contraseña"}
-                    rightElement={passwordToggle}
+                    id="address"
+                    type="text"
+                    icon={MapPin}
+                    value={data.address}
+                    onChange={(value) => setData('address', value)}
+                    maxLength={500}
+                    placeholder="Ingresa la dirección (opcional)"
                 />
-                {errors.password && (
-                    <InputError message={errors.password} />
+                {errors.address && (
+                    <InputError message={errors.address} />
                 )}
             </div>
 

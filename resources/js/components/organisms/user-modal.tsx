@@ -15,6 +15,7 @@ interface UserModalProps {
     onClose: () => void;
     user?: UserWithRelations | null;
     roles?: Array<{ id: number; name: string }>;
+    zones?: Array<{ id: number; name: string }>;
     title: string;
     showRole?: boolean;
     defaultRole?: string;
@@ -27,6 +28,7 @@ export function UserModal({
     onClose,
     user,
     roles = [],
+    zones = [],
     title,
     showRole = true,
     defaultRole = 'cliente',
@@ -64,6 +66,7 @@ export function UserModal({
                 <UserForm
                     user={user || undefined}
                     roles={roles}
+                    zones={zones}
                     onSuccess={handleSuccess}
                     onError={handleError}
                     showRole={showRole}

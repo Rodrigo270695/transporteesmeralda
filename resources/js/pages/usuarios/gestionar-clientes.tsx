@@ -20,6 +20,10 @@ interface UserWithRelations extends User {
         license_number: string;
         license_type: string;
     };
+    zone?: {
+        id: number;
+        name: string;
+    };
 }
 
 interface Props {
@@ -38,6 +42,7 @@ interface Props {
         to: number;
     };
     roles: Array<{ id: number; name: string }>;
+    zones: Array<{ id: number; name: string }>;
     filters?: {
         search?: string;
     };
@@ -54,7 +59,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarClientes({ users, roles, filters }: Props) {
+export default function GestionarClientes({ users, roles, zones, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -231,6 +236,18 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">{user.email}</p>
                                                 )}
                                             </div>
+                                            {user.address && (
+                                                <div>
+                                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">Dirección:</span>
+                                                    <p className="text-sm text-foreground dark:text-foreground">{user.address}</p>
+                                                </div>
+                                            )}
+                                            {user.zone && (
+                                                <div>
+                                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">Zona:</span>
+                                                    <p className="text-sm text-foreground dark:text-foreground">{user.zone.name}</p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex justify-end">
@@ -270,6 +287,8 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                         <TableHead className="px-6 py-3">Nombre Completo</TableHead>
                                         <TableHead className="px-6 py-3">DNI</TableHead>
                                         <TableHead className="px-6 py-3">Contacto</TableHead>
+                                        <TableHead className="px-6 py-3">Dirección</TableHead>
+                                        <TableHead className="px-6 py-3">Zona</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -292,7 +311,16 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                                     )}
                                                 </div>
                                             </TableCell>
-
+                                            <TableCell className="px-6 py-4">
+                                                <div className="text-sm">
+                                                    {user.address || '-'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <div className="text-sm">
+                                                    {user.zone?.name || '-'}
+                                                </div>
+                                            </TableCell>
 
                                             <TableCell className="px-6 py-4">
                                                 <DropdownMenu>
@@ -391,6 +419,7 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                 onClose={() => setIsModalOpen(false)}
                 user={selectedUser}
                 roles={roles}
+                zones={zones}
                 title={getModalTitle()}
                 showRole={false}
                 defaultRole="cliente"

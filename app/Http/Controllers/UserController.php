@@ -6,6 +6,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\Driver;
+use App\Models\Zone;
 use App\Exports\ClientsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -77,6 +78,8 @@ class UserController extends Controller
             'dni' => $validated['dni'],
             'phone' => $validated['phone'],
             'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'zone_id' => $validated['zone_id'] ?? null,
             'password' => Hash::make($validated['password']),
         ]);
 
@@ -147,6 +150,8 @@ class UserController extends Controller
             'dni' => $validated['dni'],
             'phone' => $validated['phone'],
             'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'zone_id' => $validated['zone_id'] ?? null,
         ];
 
         // Solo actualizar contraseña si se proporciona
@@ -246,7 +251,7 @@ class UserController extends Controller
      */
     public function gestionarClientes(Request $request)
     {
-        $query = User::with(['roles', 'driver'])
+        $query = User::with(['roles', 'driver', 'zone'])
                     ->whereHas('roles', function ($q) {
                         $q->where('name', 'cliente');
                     });
@@ -259,7 +264,11 @@ class UserController extends Controller
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('dni', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhereHas('zone', function ($zoneQuery) use ($search) {
+                      $zoneQuery->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -268,10 +277,12 @@ class UserController extends Controller
                       ->withQueryString();
 
         $roles = Role::where('name', 'cliente')->get();
+        $zones = Zone::active()->orderBy('name')->get();
 
         return Inertia::render('usuarios/gestionar-clientes', [
             'users' => $users,
             'roles' => $roles,
+            'zones' => $zones,
             'filters' => $request->only(['search']),
         ]);
     }
