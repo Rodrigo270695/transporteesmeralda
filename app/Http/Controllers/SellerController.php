@@ -110,4 +110,28 @@ class SellerController extends Controller
                 ->with('error', 'No se pudo eliminar el vendedor. Inténtalo nuevamente.');
         }
     }
+
+    /**
+     * Update seller status
+     */
+    public function updateStatus(Request $request, Seller $seller)
+    {
+        $request->validate([
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        try {
+            $seller->update([
+                'status' => $request->status
+            ]);
+
+            $statusText = $request->status === 'active' ? 'activado' : 'desactivado';
+
+            return back()
+                ->with('success', "Vendedor {$statusText} correctamente.");
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Error al cambiar el estado del vendedor. Inténtalo nuevamente.');
+        }
+    }
 }

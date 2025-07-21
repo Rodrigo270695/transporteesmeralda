@@ -11,6 +11,8 @@ interface DeleteConfirmationModalProps {
     message?: string;
     itemName?: string;
     isDeleting?: boolean;
+    confirmText?: string;
+    loadingText?: string;
 }
 
 export function DeleteConfirmationModal({
@@ -20,7 +22,9 @@ export function DeleteConfirmationModal({
     title = "Confirmar Eliminación",
     message,
     itemName,
-    isDeleting = false
+    isDeleting = false,
+    confirmText = "Eliminar",
+    loadingText = "Eliminando..."
 }: DeleteConfirmationModalProps) {
 
     const defaultMessage = itemName
@@ -69,7 +73,7 @@ export function DeleteConfirmationModal({
                         disabled={isDeleting}
                         className="cursor-pointer"
                     >
-                        {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                        {isDeleting ? loadingText : confirmText}
                     </Button>
                 </div>
             </DialogContent>

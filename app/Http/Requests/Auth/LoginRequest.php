@@ -65,6 +65,16 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Verificar que el usuario esté activo
+        $user = Auth::user();
+        if ($user && $user->status === 'inactive') {
+            Auth::logout(); // Cerrar sesión inmediatamente
+
+            throw ValidationException::withMessages([
+                'dni' => 'Tu cuenta está desactivada. Contacta al administrador para más información.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

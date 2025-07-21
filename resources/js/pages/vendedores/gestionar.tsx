@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Edit2, Trash2, User } from 'lucide-react';
+import { MoreHorizontal, Plus, Edit2, ToggleLeft, ToggleRight, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useGlobalToast } from '@/hooks/use-global-toast';
 
@@ -19,6 +20,7 @@ interface Seller {
     last_name: string;
     phone: string;
     dni: string | null;
+    status: 'active' | 'inactive';
     created_at: string;
     updated_at: string;
 }
@@ -58,14 +60,14 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
-    const [deleteModal, setDeleteModal] = useState<{
+    const [statusModal, setStatusModal] = useState<{
         isOpen: boolean;
         seller: Seller | null;
-        isDeleting: boolean;
+        isChanging: boolean;
     }>({
         isOpen: false,
         seller: null,
-        isDeleting: false
+        isChanging: false
     });
 
     const { success, error } = useGlobalToast();
@@ -97,40 +99,45 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
         setIsModalOpen(true);
     };
 
-    const openDeleteModal = (seller: Seller) => {
-        setDeleteModal({
+    const openStatusModal = (seller: Seller) => {
+        setStatusModal({
             isOpen: true,
             seller,
-            isDeleting: false
+            isChanging: false
         });
     };
 
-    const closeDeleteModal = () => {
-        if (!deleteModal.isDeleting) {
-            setDeleteModal({
+    const closeStatusModal = () => {
+        if (!statusModal.isChanging) {
+            setStatusModal({
                 isOpen: false,
                 seller: null,
-                isDeleting: false
+                isChanging: false
             });
         }
     };
 
-    const handleDelete = () => {
-        if (!deleteModal.seller) return;
+    const handleStatusChange = () => {
+        if (!statusModal.seller) return;
 
-        setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+        setStatusModal(prev => ({ ...prev, isChanging: true }));
 
-        router.delete(window.route('vendedores.destroy', deleteModal.seller.id), {
+        const newStatus = statusModal.seller.status === 'active' ? 'inactive' : 'active';
+
+        router.patch(window.route('vendedores.update-status', statusModal.seller.id), {
+            status: newStatus
+        }, {
             onSuccess: () => {
-                setDeleteModal({
+                setStatusModal({
                     isOpen: false,
                     seller: null,
-                    isDeleting: false
+                    isChanging: false
                 });
+                // El mensaje flash se maneja automáticamente por GlobalToastManager
             },
             onError: () => {
-                setDeleteModal(prev => ({ ...prev, isDeleting: false }));
-                error('Error al eliminar', 'No se pudo eliminar el vendedor. Inténtalo nuevamente.');
+                setStatusModal(prev => ({ ...prev, isChanging: false }));
+                error('Error al cambiar estado', 'No se pudo cambiar el estado del vendedor. Inténtalo nuevamente.');
             }
         });
     };
@@ -141,6 +148,18 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
 
     const getModalTitle = () => {
         return selectedSeller ? 'Editar Vendedor' : 'Registrar Nuevo Vendedor';
+    };
+
+    const getStatusBadge = (status: 'active' | 'inactive') => {
+        return status === 'active' ? (
+            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                Activo
+            </Badge>
+        ) : (
+            <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
+                Inactivo
+            </Badge>
+        );
     };
 
     const formatDate = (dateString: string) => {
@@ -204,6 +223,9 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                     </p>
                                                 )}
                                             </div>
+                                            <div className="ml-2">
+                                                {getStatusBadge(seller.status)}
+                                            </div>
                                         </div>
 
                                         <div className="mb-4">
@@ -221,7 +243,7 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-[160px]">
+                                                <DropdownMenuContent align="end" className="w-[180px]">
                                                     <DropdownMenuItem
                                                         onClick={() => openEditModal(seller)}
                                                         className="cursor-pointer"
@@ -230,11 +252,20 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                         Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => openDeleteModal(seller)}
-                                                        className="cursor-pointer text-destructive focus:text-destructive"
+                                                        onClick={() => openStatusModal(seller)}
+                                                        className="cursor-pointer"
                                                     >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Eliminar
+                                                        {seller.status === 'active' ? (
+                                                            <>
+                                                                <ToggleLeft className="mr-2 h-4 w-4" />
+                                                                Desactivar
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <ToggleRight className="mr-2 h-4 w-4" />
+                                                                Activar
+                                                            </>
+                                                        )}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -250,6 +281,7 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                         <TableHead className="px-6 py-3">Nombre Completo</TableHead>
                                         <TableHead className="px-6 py-3">Teléfono</TableHead>
                                         <TableHead className="px-6 py-3">DNI</TableHead>
+                                        <TableHead className="px-6 py-3">Estado</TableHead>
                                         <TableHead className="px-6 py-3">Fecha de Registro</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
                                     </TableRow>
@@ -277,6 +309,9 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-6 py-4">
+                                                {getStatusBadge(seller.status)}
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
                                                 <span className="text-sm text-muted-foreground">
                                                     {formatDate(seller.created_at)}
                                                 </span>
@@ -289,7 +324,7 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-[160px]">
+                                                    <DropdownMenuContent align="end" className="w-[180px]">
                                                         <DropdownMenuItem
                                                             onClick={() => openEditModal(seller)}
                                                             className="cursor-pointer"
@@ -298,11 +333,20 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
                                                             Editar
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            onClick={() => openDeleteModal(seller)}
-                                                            className="cursor-pointer text-destructive focus:text-destructive"
+                                                            onClick={() => openStatusModal(seller)}
+                                                            className="cursor-pointer"
                                                         >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Eliminar
+                                                            {seller.status === 'active' ? (
+                                                                <>
+                                                                    <ToggleLeft className="mr-2 h-4 w-4" />
+                                                                    Desactivar
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                                                    Activar
+                                                                </>
+                                                            )}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -373,11 +417,15 @@ export default function GestionarVendedores({ sellers, filters }: Props) {
             />
 
             <DeleteConfirmationModal
-                isOpen={deleteModal.isOpen}
-                onClose={closeDeleteModal}
-                onConfirm={handleDelete}
-                itemName={deleteModal.seller ? `${deleteModal.seller.first_name} ${deleteModal.seller.last_name}` : undefined}
-                isDeleting={deleteModal.isDeleting}
+                isOpen={statusModal.isOpen}
+                onClose={closeStatusModal}
+                onConfirm={handleStatusChange}
+                itemName={statusModal.seller ? `${statusModal.seller.first_name} ${statusModal.seller.last_name}` : undefined}
+                isDeleting={statusModal.isChanging}
+                title={statusModal.seller ? (statusModal.seller.status === 'active' ? 'Desactivar Vendedor' : 'Activar Vendedor') : 'Cambiar Estado'}
+                message={statusModal.seller ? (statusModal.seller.status === 'active' ? '¿Estás seguro de que quieres desactivar este vendedor?' : '¿Estás seguro de que quieres activar este vendedor?') : 'Confirma el cambio de estado'}
+                confirmText={statusModal.seller ? (statusModal.seller.status === 'active' ? 'Desactivar' : 'Activar') : 'Cambiar Estado'}
+                loadingText={statusModal.seller ? (statusModal.seller.status === 'active' ? 'Desactivando...' : 'Activando...') : 'Cambiando estado...'}
             />
         </AppLayout>
     );

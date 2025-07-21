@@ -336,4 +336,28 @@ class UserController extends Controller
                 ->with('error', 'Error al generar el reporte Excel. Inténtalo nuevamente.');
         }
     }
+
+    /**
+     * Update user status
+     */
+    public function updateStatus(Request $request, User $user)
+    {
+        $request->validate([
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        try {
+            $user->update([
+                'status' => $request->status
+            ]);
+
+            $statusText = $request->status === 'active' ? 'activado' : 'desactivado';
+
+            return back()
+                ->with('success', "Usuario {$statusText} correctamente.");
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Error al cambiar el estado del usuario. Inténtalo nuevamente.');
+        }
+    }
 }

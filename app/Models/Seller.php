@@ -14,6 +14,7 @@ class Seller extends Model
         'last_name',
         'phone',
         'dni',
+        'status',
     ];
 
     protected $casts = [

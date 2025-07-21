@@ -31,6 +31,7 @@ class User extends Authenticatable
         'current_latitude',
         'current_longitude',
         'last_location_update',
+        'status',
     ];
 
     /**

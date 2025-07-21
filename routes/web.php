@@ -23,7 +23,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'user.active'])->group(function () {
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Rutas de Usuarios
@@ -37,6 +37,7 @@ Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard'
         Route::post('/', [UserController::class, 'store'])->name('store');
         Route::get('{user}', [UserController::class, 'show'])->name('show');
         Route::put('{user}', [UserController::class, 'update'])->name('update');
+        Route::patch('{user}/status', [UserController::class, 'updateStatus'])->name('update-status');
         Route::delete('{user}', [UserController::class, 'destroy'])->name('destroy');
     });
 
@@ -141,6 +142,7 @@ Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard'
         Route::post('/', [SellerController::class, 'store'])->name('store');
         Route::get('{seller}', [SellerController::class, 'show'])->name('show');
         Route::put('{seller}', [SellerController::class, 'update'])->name('update');
+        Route::patch('{seller}/status', [SellerController::class, 'updateStatus'])->name('update-status');
         Route::delete('{seller}', [SellerController::class, 'destroy'])->name('destroy');
     });
 

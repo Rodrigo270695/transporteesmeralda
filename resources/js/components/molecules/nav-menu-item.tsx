@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface NavMenuItemProps {
     item: NavItem;
@@ -18,12 +18,20 @@ interface NavMenuItemProps {
 
 export function NavMenuItem({ item }: NavMenuItemProps) {
     const page = usePage();
-    const [isOpen, setIsOpen] = useState(false);
+
+    // Verificar si algún subitem está activo
+    const hasActiveSubitem = useMemo(() => {
+        if (!item.items) return false;
+        return item.items.some(subItem => subItem.href === page.url);
+    }, [item.items, page.url]);
+
+    // Inicializar el estado abierto si hay un subitem activo
+    const [isOpen, setIsOpen] = useState(hasActiveSubitem);
 
     // Si el item tiene submenús
     if (item.items && item.items.length > 0) {
         return (
-            <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+            <Collapsible asChild open={isOpen || hasActiveSubitem} onOpenChange={setIsOpen}>
                 <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                         <SidebarMenuButton

@@ -8,9 +8,7 @@ import {
     Users,
     UserPlus,
     MapPin,
-    Calendar,
     DollarSign,
-    Settings,
     FileText,
     BarChart3,
     Package,
@@ -116,11 +114,18 @@ export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
 
     // Verificar roles del usuario
-    const userRoles = (auth.user as any)?.roles || [];
-    const isAdmin = Array.isArray(userRoles) && userRoles.some((role: any) => role.name === 'admin');
-    const isConductor = Array.isArray(userRoles) && userRoles.some((role: any) => role.name === 'conductor');
+    interface Role {
+        name: string;
+    }
 
-            // Filtrar items del menú según el rol
+    interface UserWithRoles {
+        roles?: Role[];
+    }
+
+    const userRoles = (auth.user as UserWithRoles)?.roles || [];
+    const isConductor = Array.isArray(userRoles) && userRoles.some((role: Role) => role.name === 'conductor');
+
+    // Filtrar items del menú según el rol
     const getFilteredNavItems = (): NavItem[] => {
         if (isConductor) {
             // Para conductores: Dashboard, Transportes y Gestión (solo Vista Conductor)
