@@ -292,7 +292,7 @@ class UserController extends Controller
      */
     public function gestionarConductores(Request $request)
     {
-        $query = User::with(['roles', 'driver'])
+        $query = User::with(['roles', 'driver', 'zone'])
                     ->whereHas('roles', function ($q) {
                         $q->where('name', 'conductor');
                     });
@@ -305,7 +305,13 @@ class UserController extends Controller
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('dni', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhereHas('driver', function ($driverQuery) use ($search) {
+                      $driverQuery->where('license_number', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('zone', function ($zoneQuery) use ($search) {
+                      $zoneQuery->where('name', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -314,10 +320,12 @@ class UserController extends Controller
                       ->withQueryString();
 
         $roles = Role::where('name', 'conductor')->get();
+        $zones = Zone::active()->orderBy('name')->get();
 
         return Inertia::render('usuarios/gestionar-conductores', [
             'users' => $users,
             'roles' => $roles,
+            'zones' => $zones,
             'filters' => $request->only(['search']),
         ]);
     }

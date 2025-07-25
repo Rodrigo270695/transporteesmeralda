@@ -39,6 +39,7 @@ interface Props {
         to: number;
     };
     roles: Array<{ id: number; name: string }>;
+    zones: Array<{ id: number; name: string }>;
     filters?: {
         search?: string;
     };
@@ -55,7 +56,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarConductores({ users, roles, filters }: Props) {
+export default function GestionarConductores({ users, roles, zones, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -442,6 +443,7 @@ export default function GestionarConductores({ users, roles, filters }: Props) {
                 onClose={() => setIsModalOpen(false)}
                 user={selectedUser}
                 roles={roles}
+                zones={zones}
                 title={getModalTitle()}
                 showRole={false}
                 defaultRole="conductor"
