@@ -273,7 +273,7 @@ class UserController extends Controller
         }
 
         $users = $query->orderBy('created_at', 'desc')
-                      ->paginate(5)
+                      ->paginate(10)
                       ->withQueryString();
 
         $roles = Role::where('name', 'cliente')->get();
@@ -316,7 +316,7 @@ class UserController extends Controller
         }
 
         $users = $query->orderBy('created_at', 'desc')
-                      ->paginate(5)
+                      ->paginate(10)
                       ->withQueryString();
 
         $roles = Role::where('name', 'conductor')->get();

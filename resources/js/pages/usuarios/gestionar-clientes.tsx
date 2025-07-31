@@ -17,6 +17,10 @@ import { useGlobalToast } from '@/hooks/use-global-toast';
 interface UserWithRelations extends User {
     roles: Array<{ name: string }>;
     status: 'active' | 'inactive';
+    zone?: {
+        id: number;
+        name: string;
+    };
     driver?: {
         license_number: string;
         license_type: string;
@@ -39,6 +43,7 @@ interface Props {
         to: number;
     };
     roles: Array<{ id: number; name: string }>;
+    zones: Array<{ id: number; name: string }>;
     filters?: {
         search?: string;
     };
@@ -55,7 +60,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function GestionarClientes({ users, roles, filters }: Props) {
+export default function GestionarClientes({ users, roles, zones, filters }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRelations | null>(null);
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
@@ -187,7 +192,7 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex-1">
                             <SearchInput
-                                placeholder="Buscar por nombres, apellidos, teléfono, DNI o email..."
+                                placeholder="Buscar por nombres, apellidos, teléfono, DNI, email, dirección o zona..."
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 onClear={clearSearch}
@@ -222,6 +227,11 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                                 {user.email && (
                                                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                                                         Email: {user.email}
+                                                    </p>
+                                                )}
+                                                {user.zone && (
+                                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                                        Zona: {user.zone.name}
                                                     </p>
                                                 )}
                                             </div>
@@ -284,6 +294,7 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                         <TableHead className="px-6 py-3">Teléfono</TableHead>
                                         <TableHead className="px-6 py-3">DNI</TableHead>
                                         <TableHead className="px-6 py-3">Email</TableHead>
+                                        <TableHead className="px-6 py-3">Zona</TableHead>
                                         <TableHead className="px-6 py-3">Estado</TableHead>
                                         <TableHead className="px-6 py-3">Fecha de Registro</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
@@ -313,6 +324,17 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                                                         <span className="text-foreground">{user.email}</span>
                                                     ) : (
                                                         <span className="text-muted-foreground italic">Sin email</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <div className="text-sm">
+                                                    {user.zone ? (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                            {user.zone.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic">Sin zona</span>
                                                     )}
                                                 </div>
                                             </TableCell>
@@ -420,6 +442,7 @@ export default function GestionarClientes({ users, roles, filters }: Props) {
                 onClose={() => setIsModalOpen(false)}
                 user={selectedUser}
                 roles={roles}
+                zones={zones}
                 title={getModalTitle()}
                 showRole={false}
                 defaultRole="cliente"

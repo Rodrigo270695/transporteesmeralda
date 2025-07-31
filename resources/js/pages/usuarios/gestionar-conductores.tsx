@@ -17,6 +17,10 @@ import { useGlobalToast } from '@/hooks/use-global-toast';
 interface UserWithRelations extends User {
     roles: Array<{ name: string }>;
     status: 'active' | 'inactive';
+    zone?: {
+        id: number;
+        name: string;
+    };
     driver?: {
         license_number: string;
         license_type: string;
@@ -188,7 +192,7 @@ export default function GestionarConductores({ users, roles, zones, filters }: P
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <div className="flex-1">
                             <SearchInput
-                                placeholder="Buscar por nombres, apellidos, teléfono, DNI o licencia..."
+                                placeholder="Buscar por nombres, apellidos, teléfono, DNI, licencia o zona..."
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 onClear={clearSearch}
@@ -228,6 +232,11 @@ export default function GestionarConductores({ users, roles, zones, filters }: P
                                                 {user.driver && (
                                                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                                                         Licencia: {user.driver.license_number}
+                                                    </p>
+                                                )}
+                                                {user.zone && (
+                                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                                        Zona: {user.zone.name}
                                                     </p>
                                                 )}
                                             </div>
@@ -291,6 +300,7 @@ export default function GestionarConductores({ users, roles, zones, filters }: P
                                         <TableHead className="px-6 py-3">DNI</TableHead>
                                         <TableHead className="px-6 py-3">Email</TableHead>
                                         <TableHead className="px-6 py-3">Licencia</TableHead>
+                                        <TableHead className="px-6 py-3">Zona</TableHead>
                                         <TableHead className="px-6 py-3">Estado</TableHead>
                                         <TableHead className="px-6 py-3">Fecha de Registro</TableHead>
                                         <TableHead className="px-6 py-3 w-[80px]">Acciones</TableHead>
@@ -336,6 +346,17 @@ export default function GestionarConductores({ users, roles, zones, filters }: P
                                                         </div>
                                                     ) : (
                                                         <span className="text-muted-foreground italic">Sin licencia</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4">
+                                                <div className="text-sm">
+                                                    {user.zone ? (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                            {user.zone.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic">Sin zona</span>
                                                     )}
                                                 </div>
                                             </TableCell>
